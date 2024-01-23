@@ -18,13 +18,15 @@ Modbus:  widely used protocol, and IO available easy.  and UI can be IOS, androi
 Now, development started, and vscode+arduino uno +freertos+modbus, is ready.
 
 
-1. Heating control section
+1. Heating control section(developing)
    temperature read added. and temperature value is stored to Modbus Holding registers. 
    
-2. Pressure control section
-3. PCB board
-4. Android iOS APP
- 5. maui bluetooth app development.
+2. Pressure control section(future)
+
+3. IO(future)
+4.  PCB board(futrue)
+5. Android iOS APP(developing)
+  maui bluetooth app developing.
 
 ## Contribution
 
