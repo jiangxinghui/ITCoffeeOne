@@ -10,10 +10,21 @@ This project is in its early stages.
 
 ### Plan
 
+
+arduino uno based: a lot of arduino diy module available.
+freertos: rtos included, and message interchange between boiler controller, pump controller and io controller.
+Modbus:  widely used protocol, and IO available easy.  and UI can be IOS, android, etc mobile app, also Industry control HMI.
+
+Now, development started, and vscode+arduino uno +freertos+modbus, is ready.
+
+
 1. Heating control section
+   temperature read added. and temperature value is stored to Modbus Holding registers. 
+   
 2. Pressure control section
 3. PCB board
 4. Android iOS APP
+ 5. maui bluetooth app development.
 
 ## Contribution
 
