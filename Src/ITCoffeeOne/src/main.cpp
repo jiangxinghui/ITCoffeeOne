@@ -1,25 +1,55 @@
-#include <Arduino.h>
+#include <main.h>
 
-#include <Arduino_FreeRTOS.h>
 
-// define two tasks for Blink & AnalogRead
-void TaskBlink( void *pvParameters );
+//#include <avr8-stub.h>
+
+
+
+SoftwareSerial mySerial(rxPin,txPin);
+
+ModbusRTUSlave modbus(mySerial);
+
+uint16_t holdingRegisters[5];
+bool coils[2];
+bool discreteInputs[2];
+uint16_t inputRegisters[2];
+
+
+
+void TaskModbus( void *pvParameters );
 void TaskAnalogRead( void *pvParameters );
 
 // the setup function runs once when you press reset or power the board
 void setup() {
-  
+
+
+//debug_init();
+
+thermocoupleInit();
+
+ modbus.configureHoldingRegisters(holdingRegisters,5);
+
+ modbus.configureCoils(coils, 2);                       // bool array of coil values, number of coils
+   modbus.configureDiscreteInputs(discreteInputs, 2);     // bool array of discrete input values, number of discrete inputs
+
+   modbus.configureInputRegisters(inputRegisters, 2);     // unsigned 16 bit integer array of input register values, number of input registers
+
+   modbus.begin(1,9600,SERIAL_8N1);
+
   // initialize serial communication at 9600 bits per second:
-  Serial.begin(9600);
+  Serial.begin(19200);
   
   while (!Serial) {
     ; // wait for serial port to connect. Needed for native USB, on LEONARDO, MICRO, YUN, and other 32u4 based boards.
   }
 
+
+
+
   // Now set up two tasks to run independently.
   xTaskCreate(
-    TaskBlink
-    ,  "Blink"   // A name just for humans
+    TaskModbus
+    ,  "Modbus"   // A name just for humans
     ,  128  // This stack size can be checked & adjusted by reading the Stack Highwater
     ,  NULL
     ,  2  // Priority, with 3 (configMAX_PRIORITIES - 1) being the highest, and 0 being the lowest.
@@ -38,72 +68,67 @@ void setup() {
 
 void loop()
 {
-  // Empty. Things are done in Tasks.
+//一般不放代码这里。 优先级最低
+
 }
+
+static void sensorsReadTemperature(void) {
+
+
+   // currentState.temperature = thermocoupleRead() - runningCfg.offsetTemp;  //changed by xhjiang
+   holdingRegisters[0] = thermocoupleRead()*10 ;
+
+
+ 
+  
+}
+
+static void sensorsRead(void){
+
+  sensorsReadTemperature();
+}
+
+
 
 /*--------------------------------------------------*/
 /*---------------------- Tasks ---------------------*/
 /*--------------------------------------------------*/
 
-void TaskBlink(void *pvParameters)  // This is a task.
+void TaskModbus(void *pvParameters)  // This is a task.
 {
   (void) pvParameters;
 
-/*
-  Blink
-  Turns on an LED on for one second, then off for one second, repeatedly.
 
-  Most Arduinos have an on-board LED you can control. On the UNO, LEONARDO, MEGA, and ZERO 
-  it is attached to digital pin 13, on MKR1000 on pin 6. LED_BUILTIN takes care 
-  of use the correct LED pin whatever is the board used.
-  
-  The MICRO does not have a LED_BUILTIN available. For the MICRO board please substitute
-  the LED_BUILTIN definition with either LED_BUILTIN_RX or LED_BUILTIN_TX.
-  e.g. pinMode(LED_BUILTIN_RX, OUTPUT); etc.
-  
-  If you want to know what pin the on-board LED is connected to on your Arduino model, check
-  the Technical Specs of your board  at https://www.arduino.cc/en/Main/Products
-  
-  This example code is in the public domain.
 
-  modified 8 May 2014
-  by Scott Fitzgerald
-  
-  modified 2 Sep 2016
-  by Arturo Guadalupi
-*/
 
-  // initialize digital LED_BUILTIN on pin 13 as an output.
-  pinMode(LED_BUILTIN, OUTPUT);
 
   for (;;) // A Task shall never return or exit.
   {
-    digitalWrite(LED_BUILTIN, HIGH);   // turn the LED on (HIGH is the voltage level)
-    vTaskDelay( 1000 / portTICK_PERIOD_MS ); // wait for one second
-    digitalWrite(LED_BUILTIN, LOW);    // turn the LED off by making the voltage LOW
-    vTaskDelay( 1000 / portTICK_PERIOD_MS ); // wait for one second
+  
+
+      modbus.poll();
+
+vTaskDelay(100 / portTICK_PERIOD_MS);  
   }
 }
 
 void TaskAnalogRead(void *pvParameters)  // This is a task.
 {
   (void) pvParameters;
-  
-/*
-  AnalogReadSerial
-  Reads an analog input on pin 0, prints the result to the serial monitor.
-  Graphical representation is available using serial plotter (Tools > Serial Plotter menu)
-  Attach the center pin of a potentiometer to pin A0, and the outside pins to +5V and ground.
+    // initialize digital LED_BUILTIN on pin 13 as an output.
+  pinMode(LED_BUILTIN, OUTPUT);
 
-  This example code is in the public domain.
-*/
 
   for (;;)
   {
-    // read the input on analog pin 0:
-    int sensorValue = analogRead(A0);
-    // print out the value you read:
-    Serial.println(sensorValue);
-    vTaskDelay(1);  // one tick delay (15ms) in between reads for stability
+    digitalWrite(LED_BUILTIN,! digitalRead(LED_BUILTIN));   
+
+   sensorsRead();
+
+    vTaskDelay(200 / portTICK_PERIOD_MS);  
+
   }
 }
+
+
+
