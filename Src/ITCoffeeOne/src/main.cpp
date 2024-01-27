@@ -1,29 +1,40 @@
 #include <main.h>
+#include "Heater.h"
 
 
-//#include <avr8-stub.h>
 
 
+#ifdef STM32_BOARD
 
-SoftwareSerial mySerial(rxPin,txPin);
+ModbusRTUSlave modbus(USART_Modbus);
+#else
+
+SoftwareSerial mySerial(bt_rxPin,bt_txPin);
 
 ModbusRTUSlave modbus(mySerial);
+
+#endif
 
 uint16_t holdingRegisters[5];
 bool coils[2];
 bool discreteInputs[2];
 uint16_t inputRegisters[2];
 
+Heater myHeater;
 
 
 void TaskModbus( void *pvParameters );
 void TaskAnalogRead( void *pvParameters );
+void TaskPID( void *pvParameters );
+ TaskHandle_t pidTaskHandle;
 
 // the setup function runs once when you press reset or power the board
 void setup() {
 
 
-//debug_init();
+
+
+
 
 thermocoupleInit();
 
@@ -34,14 +45,27 @@ thermocoupleInit();
 
    modbus.configureInputRegisters(inputRegisters, 2);     // unsigned 16 bit integer array of input register values, number of input registers
 
-   modbus.begin(1,9600,SERIAL_8N1);
+#ifdef STM32_BOARD
+   modbus.begin(1,9600);  //address 1, 9600, n81
+#else
+   modbus.begin(1,9600,SERIAL_8N1);  //address 1, 9600, n81
+#endif
 
-  // initialize serial communication at 9600 bits per second:
-  Serial.begin(19200);
+
+#ifdef STM32_BOARD
+
+
+#else
+//for uno debug
+  //initialize serial communication at 9600 bits per second:
+  Serial.begin(9600);
   
   while (!Serial) {
     ; // wait for serial port to connect. Needed for native USB, on LEONARDO, MICRO, YUN, and other 32u4 based boards.
   }
+
+
+#endif
 
 
 
@@ -63,12 +87,26 @@ thermocoupleInit();
     ,  1  // Priority
     ,  NULL );
 
+      xTaskCreate(
+    TaskPID
+    ,  "PID"   // A name just for humans
+    ,  128  // This stack size can be checked & adjusted by reading the Stack Highwater
+    ,  NULL
+    ,  3  // Priority, with 3 (configMAX_PRIORITIES - 1) being the highest, and 0 being the lowest.
+    ,  NULL );
+
+#ifdef STM32_BOARD
+  // start scheduler
+  vTaskStartScheduler();
+  #endif
+
+
   // Now the task scheduler, which takes over control of scheduling individual tasks, is automatically started.
 }
 
 void loop()
 {
-//一般不放代码这里。 优先级最低
+
 
 }
 
@@ -76,11 +114,13 @@ static void sensorsReadTemperature(void) {
 
 
    // currentState.temperature = thermocoupleRead() - runningCfg.offsetTemp;  //changed by xhjiang
-   holdingRegisters[0] = thermocoupleRead()*10 ;
+   holdingRegisters[0] = thermocoupleRead() ;
 
+
+  
 
  
-  
+
 }
 
 static void sensorsRead(void){
@@ -104,7 +144,7 @@ void TaskModbus(void *pvParameters)  // This is a task.
 
   for (;;) // A Task shall never return or exit.
   {
-  
+
 
       modbus.poll();
 
@@ -121,14 +161,51 @@ void TaskAnalogRead(void *pvParameters)  // This is a task.
 
   for (;;)
   {
-    digitalWrite(LED_BUILTIN,! digitalRead(LED_BUILTIN));   
+     digitalWrite(LED_BUILTIN,! digitalRead(LED_BUILTIN));   
 
    sensorsRead();
 
-    vTaskDelay(200 / portTICK_PERIOD_MS);  
+
+    vTaskDelay(500 / portTICK_PERIOD_MS);  
 
   }
 }
+
+void TaskPID(void *pvParameters)  // This is a task.
+{
+  (void) pvParameters;
+
+
+
+  // Print the high-water mark to the Serial monitor
+
+
+
+
+  for (;;) // A Task shall never return or exit.
+  {
+
+   uint32_t stackHighWaterMark = uxTaskGetStackHighWaterMark(NULL);
+    //  Serial.println(stackHighWaterMark);
+
+   double output=   myHeater.Compute(48, holdingRegisters[0] );
+
+   Serial.println("out:"+String(output));
+
+
+   //analogWrite(Pwm_Pin,output);
+   
+
+     holdingRegisters[1]=myHeater.Output;
+
+   //  holdingRegisters[2]=myHeater.onTime;
+
+
+vTaskDelay(200 / portTICK_PERIOD_MS);  
+  }
+}
+
+
 
 
 
