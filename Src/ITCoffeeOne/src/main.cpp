@@ -25,14 +25,14 @@ Heater myHeater;
 
 void TaskModbus( void *pvParameters );
 void TaskAnalogRead( void *pvParameters );
-void TaskPID( void *pvParameters );
+void TaskTune( void *pvParameters );
  TaskHandle_t pidTaskHandle;
 
 // the setup function runs once when you press reset or power the board
 void setup() {
 
 
-
+holdingRegisters[0]=34*10; //temperature setup
 
 
 
@@ -40,10 +40,10 @@ thermocoupleInit();
 
  modbus.configureHoldingRegisters(holdingRegisters,5);
 
- modbus.configureCoils(coils, 2);                       // bool array of coil values, number of coils
-   modbus.configureDiscreteInputs(discreteInputs, 2);     // bool array of discrete input values, number of discrete inputs
+// modbus.configureCoils(coils, 2);                       // bool array of coil values, number of coils
+ //  modbus.configureDiscreteInputs(discreteInputs, 2);     // bool array of discrete input values, number of discrete inputs
 
-   modbus.configureInputRegisters(inputRegisters, 2);     // unsigned 16 bit integer array of input register values, number of input registers
+  // modbus.configureInputRegisters(inputRegisters, 2);     // unsigned 16 bit integer array of input register values, number of input registers
 
 #ifdef STM32_BOARD
    modbus.begin(1,9600);  //address 1, 9600, n81
@@ -74,26 +74,28 @@ thermocoupleInit();
   xTaskCreate(
     TaskModbus
     ,  "Modbus"   // A name just for humans
-    ,  128  // This stack size can be checked & adjusted by reading the Stack Highwater
+    ,  64  // This stack size can be checked & adjusted by reading the Stack Highwater
     ,  NULL
-    ,  2  // Priority, with 3 (configMAX_PRIORITIES - 1) being the highest, and 0 being the lowest.
+    ,  3  // Priority, with 3 (configMAX_PRIORITIES - 1) being the highest, and 0 being the lowest.
     ,  NULL );
 
   xTaskCreate(
     TaskAnalogRead
     ,  "AnalogRead"
+    ,  64  // Stack size
+    ,  NULL
+    ,  2  // Priority
+    ,  NULL );
+
+   xTaskCreate(
+    TaskTune
+    ,  "task tune"
     ,  128  // Stack size
     ,  NULL
     ,  1  // Priority
     ,  NULL );
 
-      xTaskCreate(
-    TaskPID
-    ,  "PID"   // A name just for humans
-    ,  128  // This stack size can be checked & adjusted by reading the Stack Highwater
-    ,  NULL
-    ,  3  // Priority, with 3 (configMAX_PRIORITIES - 1) being the highest, and 0 being the lowest.
-    ,  NULL );
+
 
 #ifdef STM32_BOARD
   // start scheduler
@@ -103,18 +105,11 @@ thermocoupleInit();
 
   // Now the task scheduler, which takes over control of scheduling individual tasks, is automatically started.
 }
-
-void loop()
-{
-
-
-}
-
 static void sensorsReadTemperature(void) {
 
 
    // currentState.temperature = thermocoupleRead() - runningCfg.offsetTemp;  //changed by xhjiang
-   holdingRegisters[0] = thermocoupleRead() ;
+   holdingRegisters[1] = thermocoupleRead()*10 ;
 
 
   
@@ -127,6 +122,14 @@ static void sensorsRead(void){
 
   sensorsReadTemperature();
 }
+void loop()
+{
+
+}
+
+
+
+  
 
 
 
@@ -147,65 +150,88 @@ void TaskModbus(void *pvParameters)  // This is a task.
 
 
       modbus.poll();
-
-vTaskDelay(100 / portTICK_PERIOD_MS);  
+ 
+vTaskDelay(50 / portTICK_PERIOD_MS);  
   }
 }
+
+
 
 void TaskAnalogRead(void *pvParameters)  // This is a task.
 {
   (void) pvParameters;
-    // initialize digital LED_BUILTIN on pin 13 as an output.
-  pinMode(LED_BUILTIN, OUTPUT);
 
 
   for (;;)
   {
-     digitalWrite(LED_BUILTIN,! digitalRead(LED_BUILTIN));   
+    
+sensorsRead();
 
-   sensorsRead();
 
 
     vTaskDelay(500 / portTICK_PERIOD_MS);  
-
   }
+
+
 }
 
-void TaskPID(void *pvParameters)  // This is a task.
+void TaskTune(void *pvParameters)  // This is a task.
 {
   (void) pvParameters;
 
 
 
-  // Print the high-water mark to the Serial monitor
+pinMode(Pwm_Pin,OUTPUT);
+#ifdef STM32_BOARD
+  // start scheduler
+
+#else
+
+//Timer1.initialize(50000); //set the frequency in us
+
+#endif
+
+
+myHeater.gOutputPwr=0;
+
+myHeater.tuning_on();
 
 
 
-
-  for (;;) // A Task shall never return or exit.
+  for (;;)
   {
-
-   uint32_t stackHighWaterMark = uxTaskGetStackHighWaterMark(NULL);
-    //  Serial.println(stackHighWaterMark);
-
-   double output=   myHeater.Compute(48, holdingRegisters[0] );
-
-   Serial.println("out:"+String(output));
+    
 
 
-   //analogWrite(Pwm_Pin,output);
-   
 
-     holdingRegisters[1]=myHeater.Output;
+ //  double output=   myHeater.Compute(holdingRegisters[0]/10.0, holdingRegisters[1] /10);
 
-   //  holdingRegisters[2]=myHeater.onTime;
+#ifdef STM32_BOARD
+  // 
+
+#else
 
 
-vTaskDelay(200 / portTICK_PERIOD_MS);  
+
+//Timer1.pwm(Pwm_Pin,output/100*1024);
+
+
+
+  #endif
+
+   myHeater.time_now=millis();
+
+  myHeater.gTargetTemp=holdingRegisters[0]/10; 
+  myHeater.gInputTemp=holdingRegisters[1]/10;
+
+
+  myHeater.heat();
+  myHeater.updateHeater();
+  holdingRegisters[2]=myHeater.gOutputPwr*10;
+
+
+    vTaskDelay(10 / portTICK_PERIOD_MS);  
   }
 }
-
-
-
 
 

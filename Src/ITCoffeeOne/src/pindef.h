@@ -2,7 +2,7 @@
 #ifndef PINDEF_H
 #define PINDEF_H
 
-#define STM32_BOARD
+//#define STM32_BOARD
 
 #if defined(STM32_BOARD)
 // STM32F4 pins definitions
@@ -51,7 +51,7 @@
 #else
 //arduino uno pwm pin 3,5,6,9,10,11
 
-#define Pwm_Pin 3
+#define Pwm_Pin 9
 
 #define thermoDO      4
    
@@ -64,8 +64,8 @@
 #define bt_rxPin     10
 #define bt_txPin       11
 
-#define rxPin2    8
-#define txPin2       9
+
+
 
 #endif  //end stm32 board
 
