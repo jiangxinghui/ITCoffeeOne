@@ -2,8 +2,8 @@
 #ifndef PINDEF_H
 #define PINDEF_H
 
-#define STM32_BOARD
-
+//#define STM32_BOARD
+#define Simulate_Input
 #if defined(STM32_BOARD)
 // STM32F4 pins definitions
 #define thermoDO      PB4

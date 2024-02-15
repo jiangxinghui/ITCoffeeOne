@@ -91,7 +91,7 @@ thermocoupleInit();
    xTaskCreate(
     TaskHeater
     ,  "heater task "
-    ,  128  // Stack size
+    ,  64  // Stack size
     ,  NULL
     ,  1  // Priority
     ,  NULL );
@@ -150,8 +150,13 @@ holdingRegisters[0]=93*10;
   for (;;) // A Task shall never return or exit.
   {
 
+#ifdef Simulate_Input
+//holding register[1] is controlled external
+#else
 
   holdingRegisters[1]=temperature*10;
+#endif
+
   holdingRegisters[2]=myHeater.gOutputPwr*10;
 holdingRegisters[3]=myHeater.gP*100;
 holdingRegisters[4]=myHeater.gD*100;
@@ -226,7 +231,7 @@ pinMode(HeaterPin,OUTPUT);
 myHeater.gOutputPwr=0;
 
 
-
+myHeater.tuning_on();
 
 
   for (;;)
