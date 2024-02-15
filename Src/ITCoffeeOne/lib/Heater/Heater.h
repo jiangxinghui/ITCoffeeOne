@@ -19,7 +19,7 @@ public:
 #define S_aI 0.0
 #define S_aD 0.0
 #define S_TSET 35.0
-#define S_TBAND 1.5
+#define S_TBAND 5.0
 
 #define PID_INTERVAL 200
 #define HEATER_INTERVAL 1000
@@ -32,7 +32,7 @@ double gP = S_P, gI = S_I, gD = S_D;
 double gaP = S_aP, gaI = S_aI, gaD = S_aD;
 
 
-double aTuneStep = 100.0, aTuneThres = 0.2;
+double aTuneStep = 100.0, aTuneThres = 1.0; //change atunethres from 0.2 to 1.0
 double maxUpperT = 0, minLowerT = 0;
 double AvgUpperT = 0, AvgLowerT = 0;
 int UpperCnt = 0, LowerCnt = 0;
@@ -46,7 +46,7 @@ unsigned long time_last = 0;
 
 float heatcycles; // the number of millis out of 1000 for the current heat amount (percent * 10)
 
-bool heaterState = 0;
+ bool heaterState = 0;
 unsigned long heatCurrentTime = 0, heatLastTime = 0;
 
 
@@ -73,8 +73,8 @@ void SetOutputLimit(double min ,double max);
 
 void tuning_on();
 void tuning_off();
-void heat();
-void tune();
+void loop();
+void tuning_loop();
 void updateHeater();
 
 void setHeatPowerPercentage(float power);

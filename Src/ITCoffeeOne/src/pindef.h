@@ -2,7 +2,7 @@
 #ifndef PINDEF_H
 #define PINDEF_H
 
-//#define STM32_BOARD
+#define STM32_BOARD
 
 #if defined(STM32_BOARD)
 // STM32F4 pins definitions
@@ -14,7 +14,7 @@
 // #define zcPin         PA0
 // #define brewPin       PC14
 // #define relayPin      PA15
-// #define dimmerPin     PA1
+ #define HeaterPin     PA1
 // #define steamPin      PC15
 // #define valvePin      PB1  //changed by xhjiang from pc13->pb1
 
@@ -51,7 +51,7 @@
 #else
 //arduino uno pwm pin 3,5,6,9,10,11
 
-#define Pwm_Pin 9
+#define HeaterPin 9
 
 #define thermoDO      4
    

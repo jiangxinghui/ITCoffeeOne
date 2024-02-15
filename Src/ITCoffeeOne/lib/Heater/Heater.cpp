@@ -28,7 +28,8 @@ myPID.SetOutputLimits(0,1000);
 
 myPID.SetMode(AUTOMATIC);
 
-
+time_now=millis();
+time_last=time_now;
 
 }
 
@@ -46,10 +47,10 @@ double Heater::Compute(double setpoint,double input)
     gTargetTemp=setpoint;
 
    // adaptTunings();
-if(tuning==true)
-{
-    tune();
-}
+// if(tuning==true)
+// {
+//     tune();
+// }
 //myPID.Compute();
   
 
@@ -120,16 +121,53 @@ void Heater::tuning_on() {
 void Heater::tuning_off() {
   myPID.SetMode(AUTOMATIC);
   tuning = false;
+Serial.print("tune time");
+Serial.print(tune_time);
+Serial.print("tune start");
+Serial.print(tune_start);
+Serial.print("tune count");
+Serial.print(tune_count);
+Serial.println();
 
   double dt = float(tune_time - tune_start) / tune_count;
+
+Serial.print("avg upper");
+Serial.print(AvgUpperT);
+Serial.print("uper count");
+Serial.print(UpperCnt);
+Serial.print("average lower");
+Serial.print(AvgLowerT);
+Serial.print("lower count");
+Serial.print(LowerCnt);
+
+Serial.println();
   double dT = ((AvgUpperT / UpperCnt) - (AvgLowerT / LowerCnt));
 
   double Ku = 4 * (2 * aTuneStep) / (dT * 3.14159);
   double Pu = dt / 1000; // units of seconds
 
+
+Serial.print("ku");
+Serial.print(Ku);
+Serial.print("Pu");
+Serial.print(Pu);
+Serial.println();
+
+
   gP = 0.6 * Ku;
   gI = 1.2 * Ku / Pu;
   gD = 0.075 * Ku * Pu;
+
+
+
+
+  Serial.print("gp");
+  Serial.print(gP );
+    Serial.print("gi");
+  Serial.print(gI );
+    Serial.print("gd");
+  Serial.print(gD );
+Serial.println();
 }
 void Heater:: setHeatPowerPercentage(float power) {
   if (power < 0.0) {
@@ -142,19 +180,55 @@ void Heater:: setHeatPowerPercentage(float power) {
 }
 
 
-void Heater::heat()
+void Heater::loop()
 {  
+  time_now=millis();
+
    if (abs(time_now - time_last) >= PID_INTERVAL or time_last > time_now) {
    
-   
-   if (tuning == true)
-    {
+    if (poweroffMode == true) {
 
-      tune();
+      //power off
+      gOutputPwr = 0;
+      setHeatPowerPercentage(gOutputPwr);
     }
+    else if (externalControlMode == true) {
+      //external control
+      gOutputPwr = 1000 * gButtonState;
+      setHeatPowerPercentage(gOutputPwr);
+    }
+    else 
+     if (tuning == true){
+        //tune
+        tuning_loop();
+    
+    }
+    else{
+
+      //pid control
+           if ( !osmode && abs(gTargetTemp - gInputTemp) >= gOvershoot ) {
+          myPID.SetTunings(gaP, gaI, gaD);
+          osmode = true;
+            }
+            else if ( osmode && abs(gTargetTemp - gInputTemp) < gOvershoot ) {
+              myPID.SetTunings(gP, gI, gD);
+              osmode = false;
+            }
+
+
+            if (myPID.Compute() == true) {
+              setHeatPowerPercentage(gOutputPwr);
+            }
+        }
+
+
+
     time_last=time_now;
    
     }
+
+       updateHeater();  //update every loop, so , out of interval.
+
 }
 
 void Heater::updateHeater() {
@@ -170,21 +244,22 @@ void Heater::updateHeater() {
   }
 }
 void Heater::turnHeatElementOnOff(bool on) {
-  digitalWrite(9, on); //turn pin high
+  //digitalWrite(HeaterPin, on); //turn pin high , change to main.cpp
   heaterState = on;
+  
 }
 
 
 
 
 
-void Heater::tune() {
+void Heater::tuning_loop() {
   
  
   // count seconds between power-on-cycles
   //
   //
-  if (gInputTemp < (gTargetTemp - aTuneThres)) { // below lower threshold -> power on
+  if (gInputTemp <= (gTargetTemp - aTuneThres)) { // below lower threshold -> power on
     if (gOutputPwr == 0) { // just fell below threshold
       if (tune_count == 0) tune_start = time_now;
       tune_time = time_now;
@@ -200,7 +275,7 @@ void Heater::tune() {
     // Serial.println(gOutputPwr);
 
   }
-  else if (gInputTemp > (gTargetTemp + aTuneThres)) { // above upper threshold -> power off
+  else if (gInputTemp >= (gTargetTemp + aTuneThres)) { // above upper threshold -> power off
     //if (gOutputPwr == aTuneStep) { // just crossed upper threshold
       //AvgUpperT += gInputTemp;
       //UpperCnt++;

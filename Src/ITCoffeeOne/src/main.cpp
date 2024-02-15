@@ -15,32 +15,33 @@ ModbusRTUSlave modbus(mySerial);
 
 #endif
 
-uint16_t holdingRegisters[5];
+uint16_t holdingRegisters[10];
 bool coils[2];
 bool discreteInputs[2];
 uint16_t inputRegisters[2];
 
 Heater myHeater;
+double temperature;
 
 
 void TaskModbus( void *pvParameters );
 void TaskAnalogRead( void *pvParameters );
-void TaskTune( void *pvParameters );
+void TaskHeater( void *pvParameters );
  TaskHandle_t pidTaskHandle;
 
 // the setup function runs once when you press reset or power the board
 void setup() {
 
 
-holdingRegisters[0]=34*10; //temperature setup
-
+coils[0]=false;
+coils[1]=false;
 
 
 thermocoupleInit();
 
- modbus.configureHoldingRegisters(holdingRegisters,5);
+ modbus.configureHoldingRegisters(holdingRegisters,10);
 
-// modbus.configureCoils(coils, 2);                       // bool array of coil values, number of coils
+ modbus.configureCoils(coils, 2);                       // bool array of coil values, number of coils
  //  modbus.configureDiscreteInputs(discreteInputs, 2);     // bool array of discrete input values, number of discrete inputs
 
   // modbus.configureInputRegisters(inputRegisters, 2);     // unsigned 16 bit integer array of input register values, number of input registers
@@ -88,8 +89,8 @@ thermocoupleInit();
     ,  NULL );
 
    xTaskCreate(
-    TaskTune
-    ,  "task tune"
+    TaskHeater
+    ,  "heater task "
     ,  128  // Stack size
     ,  NULL
     ,  1  // Priority
@@ -109,7 +110,8 @@ static void sensorsReadTemperature(void) {
 
 
    // currentState.temperature = thermocoupleRead() - runningCfg.offsetTemp;  //changed by xhjiang
-   holdingRegisters[1] = thermocoupleRead()*10 ;
+ 
+   temperature = thermocoupleRead() ;
 
 
   
@@ -142,16 +144,45 @@ void TaskModbus(void *pvParameters)  // This is a task.
   (void) pvParameters;
 
 
-
+holdingRegisters[0]=93*10;
 
 
   for (;;) // A Task shall never return or exit.
   {
 
 
+  holdingRegisters[1]=temperature*10;
+  holdingRegisters[2]=myHeater.gOutputPwr*10;
+holdingRegisters[3]=myHeater.gP*100;
+holdingRegisters[4]=myHeater.gD*100;
+holdingRegisters[5]=myHeater.gI*100;
+holdingRegisters[6]=myHeater.tuning;
+holdingRegisters[7]=myHeater.tune_count;
+holdingRegisters[8]=myHeater.LowerCnt;
+holdingRegisters[9]=myHeater.UpperCnt;
+
       modbus.poll();
- 
-vTaskDelay(50 / portTICK_PERIOD_MS);  
+
+
+    if(coils[0]==true)
+    {myHeater.tuning_on();
+    coils[0]=false;
+
+    Serial.println("start tune");
+    }
+
+   if(coils[1]==true)
+    {myHeater.tuning_off();
+
+    Serial.println("stop tune");
+  
+
+
+    coils[1]=false;
+   }
+
+
+vTaskDelay(200 / portTICK_PERIOD_MS);  
   }
 }
 
@@ -165,7 +196,7 @@ void TaskAnalogRead(void *pvParameters)  // This is a task.
   for (;;)
   {
     
-sensorsRead();
+    sensorsRead();
 
 
 
@@ -175,13 +206,13 @@ sensorsRead();
 
 }
 
-void TaskTune(void *pvParameters)  // This is a task.
+void TaskHeater(void *pvParameters)  // This is a task.
 {
   (void) pvParameters;
 
 
 
-pinMode(Pwm_Pin,OUTPUT);
+pinMode(HeaterPin,OUTPUT);
 #ifdef STM32_BOARD
   // start scheduler
 
@@ -194,7 +225,7 @@ pinMode(Pwm_Pin,OUTPUT);
 
 myHeater.gOutputPwr=0;
 
-myHeater.tuning_on();
+
 
 
 
@@ -219,15 +250,15 @@ myHeater.tuning_on();
 
   #endif
 
-   myHeater.time_now=millis();
+   
 
   myHeater.gTargetTemp=holdingRegisters[0]/10; 
   myHeater.gInputTemp=holdingRegisters[1]/10;
 
 
-  myHeater.heat();
-  myHeater.updateHeater();
-  holdingRegisters[2]=myHeater.gOutputPwr*10;
+  myHeater.loop();
+ 
+  digitalWrite(HeaterPin,myHeater.heaterState);
 
 
     vTaskDelay(10 / portTICK_PERIOD_MS);  

@@ -19,7 +19,7 @@
 
 #else
 #include <Arduino_FreeRTOS.h>
-#include <TimerOne.h>
+
 
     #define GET_KTYPE_READ_EVERY    250 // max6675 amp module data read interval not recommended to be changed to lower than 250 (ms)
 #endif
