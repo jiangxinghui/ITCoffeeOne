@@ -128,7 +128,8 @@ Serial.print(tune_start);
 Serial.print("tune count");
 Serial.print(tune_count);
 Serial.println();
-
+if(tune_count>0&&LowerCnt>0&&UpperCnt>0)
+{
   double dt = float(tune_time - tune_start) / tune_count;
 
 Serial.print("avg upper");
@@ -158,7 +159,7 @@ Serial.println();
   gI = 1.2 * Ku / Pu;
   gD = 0.075 * Ku * Pu;
 
-
+}
 
 
   Serial.print("gp");
@@ -219,7 +220,9 @@ void Heater::loop()
             if (myPID.Compute() == true) {
               setHeatPowerPercentage(gOutputPwr);
             }
-        }
+
+
+         }
 
 
 
@@ -307,32 +310,7 @@ void Heater::tuning_loop() {
 }
 
 
-void Heater::statusAsJson() {
-  
-//  strcpy(Status,"time");
-
-// char myString[20];  // Choose a size that can accommodate the double and additional characters
-
-// ultoa(time_now, myString, 10);  // 10 is the base (decimal in this case)
-
-
-//    strcat(Status,myString);
-//    strcat(Status,"mesauredTemperature");
-
-  
-// dtostrf(gInputTemp, 6, 2, myString);  // 6 is the total width, 2 is the number of decimal places
-
-//     strcat(Status, myString);
-//    strcat(Status,"targetTemperature");
-//    dtostrf(gTargetTemp, 6, 2, myString);  // 6 is the total width, 2 is the number of decimal places
-
-//    strcat(Status,myString);
-//    strcat(Status,"heaterPower");
-//    dtostrf(gOutputPwr, 6, 2, myString);  // 6 is the total width, 2 is the number of decimal places
-
-//    strcat(Status,myString );
-  
 
  
  
-}
+

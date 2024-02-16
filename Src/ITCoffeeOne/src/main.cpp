@@ -27,7 +27,6 @@ double temperature;
 void TaskModbus( void *pvParameters );
 void TaskAnalogRead( void *pvParameters );
 void TaskHeater( void *pvParameters );
- TaskHandle_t pidTaskHandle;
 
 // the setup function runs once when you press reset or power the board
 void setup() {
@@ -36,7 +35,7 @@ void setup() {
 coils[0]=false;
 coils[1]=false;
 
-
+holdingRegisters[0]=93*10;
 thermocoupleInit();
 
  modbus.configureHoldingRegisters(holdingRegisters,10);
@@ -75,25 +74,18 @@ thermocoupleInit();
   xTaskCreate(
     TaskModbus
     ,  "Modbus"   // A name just for humans
-    ,  64  // This stack size can be checked & adjusted by reading the Stack Highwater
+    ,  128  // This stack size can be checked & adjusted by reading the Stack Highwater
     ,  NULL
-    ,  3  // Priority, with 3 (configMAX_PRIORITIES - 1) being the highest, and 0 being the lowest.
-    ,  NULL );
+    ,  1  // Priority, with 3 (configMAX_PRIORITIES - 1) being the highest, and 0 being the lowest.
+    , NULL );
 
-  xTaskCreate(
-    TaskAnalogRead
-    ,  "AnalogRead"
-    ,  64  // Stack size
-    ,  NULL
-    ,  2  // Priority
-    ,  NULL );
 
    xTaskCreate(
     TaskHeater
     ,  "heater task "
-    ,  64  // Stack size
+    ,  128  // Stack size
     ,  NULL
-    ,  1  // Priority
+    ,  3  // Priority
     ,  NULL );
 
 
@@ -144,7 +136,7 @@ void TaskModbus(void *pvParameters)  // This is a task.
   (void) pvParameters;
 
 
-holdingRegisters[0]=93*10;
+
 
 
   for (;;) // A Task shall never return or exit.
@@ -172,19 +164,15 @@ holdingRegisters[9]=myHeater.UpperCnt;
     if(coils[0]==true)
     {myHeater.tuning_on();
     coils[0]=false;
-
     Serial.println("start tune");
     }
 
    if(coils[1]==true)
     {myHeater.tuning_off();
-
     Serial.println("stop tune");
-  
-
-
     coils[1]=false;
    }
+
 
 
 vTaskDelay(200 / portTICK_PERIOD_MS);  
@@ -193,23 +181,7 @@ vTaskDelay(200 / portTICK_PERIOD_MS);
 
 
 
-void TaskAnalogRead(void *pvParameters)  // This is a task.
-{
-  (void) pvParameters;
 
-
-  for (;;)
-  {
-    
-    sensorsRead();
-
-
-
-    vTaskDelay(500 / portTICK_PERIOD_MS);  
-  }
-
-
-}
 
 void TaskHeater(void *pvParameters)  // This is a task.
 {
@@ -218,44 +190,12 @@ void TaskHeater(void *pvParameters)  // This is a task.
 
 
 pinMode(HeaterPin,OUTPUT);
-#ifdef STM32_BOARD
-  // start scheduler
-
-#else
-
-//Timer1.initialize(50000); //set the frequency in us
-
-#endif
-
-
 myHeater.gOutputPwr=0;
-
-
-myHeater.tuning_on();
 
 
   for (;;)
   {
-    
-
-
-
- //  double output=   myHeater.Compute(holdingRegisters[0]/10.0, holdingRegisters[1] /10);
-
-#ifdef STM32_BOARD
-  // 
-
-#else
-
-
-
-//Timer1.pwm(Pwm_Pin,output/100*1024);
-
-
-
-  #endif
-
-   
+     sensorsRead();
 
   myHeater.gTargetTemp=holdingRegisters[0]/10; 
   myHeater.gInputTemp=holdingRegisters[1]/10;
@@ -264,7 +204,6 @@ myHeater.tuning_on();
   myHeater.loop();
  
   digitalWrite(HeaterPin,myHeater.heaterState);
-
 
     vTaskDelay(10 / portTICK_PERIOD_MS);  
   }

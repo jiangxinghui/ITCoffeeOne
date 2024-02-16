@@ -18,7 +18,7 @@ public:
 #define S_aP 100.0
 #define S_aI 0.0
 #define S_aD 0.0
-#define S_TSET 35.0
+#define S_TSET 93.0
 #define S_TBAND 5.0
 
 #define PID_INTERVAL 200
@@ -32,7 +32,7 @@ double gP = S_P, gI = S_I, gD = S_D;
 double gaP = S_aP, gaI = S_aI, gaD = S_aD;
 
 
-double aTuneStep = 100.0, aTuneThres = 1.0; //change atunethres from 0.2 to 1.0
+double aTuneStep = 100.0, aTuneThres = 3.0; //change atunethres from 0.2 to 1.0
 double maxUpperT = 0, minLowerT = 0;
 double AvgUpperT = 0, AvgLowerT = 0;
 int UpperCnt = 0, LowerCnt = 0;
