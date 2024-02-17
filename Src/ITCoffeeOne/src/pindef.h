@@ -3,18 +3,18 @@
 #define PINDEF_H
 
 //#define STM32_BOARD
-#define Simulate_Input
+//#define Simulate_Input
 #if defined(STM32_BOARD)
 // STM32F4 pins definitions
-#define thermoDO      PB4
+#define thermoDO      PB4  //nano a3
 #define thermoDI      PA7 // not used
-#define thermoCS      PA6
-#define thermoCLK     PA5
+#define thermoCS      PA6   //nano d9
+#define thermoCLK     PA5   //nano d8
 
 // #define zcPin         PA0
 // #define brewPin       PC14
 // #define relayPin      PA15
- #define HeaterPin     PA1
+ #define HeaterPin     PA15 //nano a1
 // #define steamPin      PC15
 // #define valvePin      PB1  //changed by xhjiang from pc13->pb1
 
@@ -44,26 +44,26 @@
 
 
 //add by xhjiang
-#define USART_Modbus Serial1
+#define USART_Modbus Serial1   //pa9 pa10
 
 
 
 #else
 //arduino uno pwm pin 3,5,6,9,10,11
 
-#define HeaterPin 9
-
-#define thermoDO      4
-   
-#define thermoCS      5
-#define thermoCLK     6
+#define HeaterPin 15  //nano A1
 
 
 
+#define thermoDO      17  //nano A3
 
-#define bt_rxPin     10
-#define bt_txPin       11
+#define thermoCS      9   //nano d9
+#define thermoCLK     8   //nano d8
 
+
+
+#define bt_txPin       10
+#define bt_rxPin     12
 
 
 

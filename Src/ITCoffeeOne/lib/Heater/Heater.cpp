@@ -23,7 +23,7 @@ Heater::Heater()
 
 myPID.SetTunings(gP, gI, gD);
 myPID.SetSampleTime(PID_INTERVAL);
-myPID.SetOutputLimits(0,1000);
+myPID.SetOutputLimits(0,100);
 
 
 myPID.SetMode(AUTOMATIC);
@@ -39,28 +39,7 @@ void Heater::initialize()
 }
 
 
-double Heater::Compute(double setpoint,double input)
-{
 
-    gInputTemp=input;
-
-    gTargetTemp=setpoint;
-
-   // adaptTunings();
-// if(tuning==true)
-// {
-//     tune();
-// }
-//myPID.Compute();
-  
-
-
-
-
-
-// Serial.println(" in:"+String(Input)+",out:"+String(Output));
- //return Heater::Output;
-}
 
  void Heater:: SetOutputLimit(double min ,double max)
  {
@@ -72,39 +51,8 @@ double Heater::Compute(double setpoint,double input)
 
  #define abs(x) ((x)>0?(x):-(x))
 
-void Heater::adaptTunings() {
-  //double gap = Setpoint - Input;
-
-  // // 根据距离设定值的距离选择PID参数
-  //  if (gap > 5 ) {
-  //   myPID.SetTunings(5, 5, 1); // 使用激进的PID参数
-  //   Serial.println("fast");
-  // } else 
-  // if (gap> 3 ) {
-    
-  //   myPID.SetTunings(3, 1, 2); // 使用标准的PID参数
-  //   Serial.println("normal");
-  // } else if(gap>0) {
-  //   myPID.SetTunings(0.5, 0.5, 2.0); // 使用保守的PID参数
-  //    Serial.println("slow");
-  // }
-  // else
-  // { myPID.SetTunings(10, 10, 2.0); // 使用保守的PID参数
-  //    Serial.println("man=0");
-
-  // }
-
-    if ( !osmode && abs(gTargetTemp - gInputTemp) >= 10 ) {
-        myPID.SetTunings(gaP, gaI, gaD);
-        osmode = true;
-      }
-      else if ( osmode && abs(gTargetTemp - gInputTemp) < 10 ) {
-        myPID.SetTunings(gP, gI, gD);
-        osmode = false;
-      }
 
 
-}
 
 
 void Heater::tuning_on() {
@@ -121,38 +69,19 @@ void Heater::tuning_on() {
 void Heater::tuning_off() {
   myPID.SetMode(AUTOMATIC);
   tuning = false;
-Serial.print("tune time");
-Serial.print(tune_time);
-Serial.print("tune start");
-Serial.print(tune_start);
-Serial.print("tune count");
-Serial.print(tune_count);
-Serial.println();
+
 if(tune_count>0&&LowerCnt>0&&UpperCnt>0)
 {
   double dt = float(tune_time - tune_start) / tune_count;
 
-Serial.print("avg upper");
-Serial.print(AvgUpperT);
-Serial.print("uper count");
-Serial.print(UpperCnt);
-Serial.print("average lower");
-Serial.print(AvgLowerT);
-Serial.print("lower count");
-Serial.print(LowerCnt);
 
-Serial.println();
   double dT = ((AvgUpperT / UpperCnt) - (AvgLowerT / LowerCnt));
 
   double Ku = 4 * (2 * aTuneStep) / (dT * 3.14159);
   double Pu = dt / 1000; // units of seconds
 
 
-Serial.print("ku");
-Serial.print(Ku);
-Serial.print("Pu");
-Serial.print(Pu);
-Serial.println();
+
 
 
   gP = 0.6 * Ku;
@@ -162,22 +91,16 @@ Serial.println();
 }
 
 
-  Serial.print("gp");
-  Serial.print(gP );
-    Serial.print("gi");
-  Serial.print(gI );
-    Serial.print("gd");
-  Serial.print(gD );
-Serial.println();
+
 }
-void Heater:: setHeatPowerPercentage(float power) {
-  if (power < 0.0) {
-    power = 0.0;
+void Heater:: setHeatPowerPercentage(float power_in_100_percent) {
+  if (power_in_100_percent < 0.0) {
+    power_in_100_percent = 0.0;
   }
-  if (power > 1000.0) {
-    power = 1000.0;
+  if (power_in_100_percent > 100) {
+    power_in_100_percent = 100;
   }
-  heatcycles = power;
+  heatcycles = power_in_100_percent*HEATER_INTERVAL/100;  
 }
 
 
@@ -195,7 +118,7 @@ void Heater::loop()
     }
     else if (externalControlMode == true) {
       //external control
-      gOutputPwr = 1000 * gButtonState;
+      gOutputPwr = 100 * gButtonState;
       setHeatPowerPercentage(gOutputPwr);
     }
     else 
@@ -207,20 +130,43 @@ void Heater::loop()
     else{
 
       //pid control
-           if ( !osmode && abs(gTargetTemp - gInputTemp) >= gOvershoot ) {
-          myPID.SetTunings(gaP, gaI, gaD);
+      // manual: late more than 10, or great 
+           if ( !osmode && ( gInputTemp<(gTargetTemp- gOvershoot) |gInputTemp>gTargetTemp)) {
+         // myPID.SetTunings(gaP, gaI, gaD);
+           myPID.SetMode(MANUAL);
+
+         
+
           osmode = true;
             }
-            else if ( osmode && abs(gTargetTemp - gInputTemp) < gOvershoot ) {
+            else if ( osmode &&   gInputTemp>= (gTargetTemp- gOvershoot) &&(gInputTemp<=gTargetTemp)) {
+            //here is determine when exit overshoot mode
+
+            
+             gOutputPwr=0;
+               myPID.SetMode(AUTOMATIC);
               myPID.SetTunings(gP, gI, gD);
+
               osmode = false;
             }
 
 
-            if (myPID.Compute() == true) {
-              setHeatPowerPercentage(gOutputPwr);
-            }
+          if(osmode)
+          {
+            //manul control
+        
+              if(gInputTemp>gTargetTemp)gOutputPwr=0;
+           else
+           gOutputPwr=100;
 
+            setHeatPowerPercentage(gOutputPwr);
+          }
+          else
+          {
+              if (myPID.Compute() == true) {
+                setHeatPowerPercentage(gOutputPwr);
+              }
+          }
 
          }
 
@@ -239,6 +185,7 @@ void Heater::updateHeater() {
   heatCurrentTime = time_now;
   if (heatCurrentTime - heatLastTime >= HEATER_INTERVAL or heatLastTime > heatCurrentTime) { //second statement prevents overflow errors
     // begin cycle
+    Serial.println("1");
     turnHeatElementOnOff(1);  //
     heatLastTime = heatCurrentTime;
   }
