@@ -2,7 +2,7 @@
 #include <Arduino.h>
 #include <FreeRTOSConfig.h>
 
-
+#include "utils.h"
 
 
 
@@ -116,11 +116,11 @@ void Heater::loop()
       gOutputPwr = 0;
       setHeatPowerPercentage(gOutputPwr);
     }
-    else if (externalControlMode == true) {
-      //external control
-      gOutputPwr = 100 * gButtonState;
-      setHeatPowerPercentage(gOutputPwr);
-    }
+    // else if (externalControlMode == true) {
+    //   //external control
+    //   gOutputPwr = 100 * gButtonState;
+    //   setHeatPowerPercentage(gOutputPwr);
+    // }
     else 
      if (tuning == true){
         //tune
@@ -181,7 +181,7 @@ void Heater::loop()
 }
 
 void Heater::updateHeater() {
-  boolean h;
+ 
   heatCurrentTime = time_now;
   if (heatCurrentTime - heatLastTime >= HEATER_INTERVAL or heatLastTime > heatCurrentTime) { //second statement prevents overflow errors
     // begin cycle
@@ -199,9 +199,15 @@ void Heater::turnHeatElementOnOff(bool on) {
   
 }
 
+void Heater::setBoilerOn()
+{
+  heaterState=true;
+}
 
-
-
+void Heater::setBoilerOff()
+{
+  heaterState=false;
+}
 
 void Heater::tuning_loop() {
   
@@ -255,6 +261,113 @@ void Heater::tuning_loop() {
     }
   }
 }
+
+
+
+void Heater::pulseHeaters(const uint32_t pulseLength, const int factor_1, const int factor_2, const bool brewActive) {
+
+   uint32_t interval;
+   int boilerOn;
+
+
+
+
+  if (!heaterState2 && ((millis() - heaterWave) > (pulseLength * factor_1))) {
+    brewActive ? setBoilerOff() : setBoilerOn();
+        brewActive ? boilerOn=0 : boilerOn=10;
+    heaterState2=!heaterState2;
+  interval=pulseLength * factor_1;
+
+    heaterWave=millis();
+  } else if (heaterState2 && ((millis() - heaterWave) > (pulseLength / factor_2))) {
+    brewActive ? setBoilerOn() : setBoilerOff();
+         brewActive ? boilerOn=10 : boilerOn=0;
+    heaterState2=!heaterState2;
+      interval=pulseLength / factor_2;
+    heaterWave=millis();
+  }
+
+  
+}
+
+
+
+void Heater::justDoCoffee(float targetTemperature,float temperature, const bool brewActive) {
+
+  //float brewTempSetPoint = ACTIVE_PROFILE(runningCfg).setpoint + runningCfg.offsetTemp;
+   float brewTempSetPoint = targetTemperature;
+  float sensorTemperature = temperature;// + runningCfg.offsetTemp;
+
+  if (brewActive) { //if brewState == true
+  
+    if(sensorTemperature <= brewTempSetPoint - 5.f) {
+     
+     gOutputPwr=100; //added by itcoffee
+
+      setBoilerOn();
+    } else 
+    
+    {
+      float deltaOffset = 0.f;
+     // if (runningCfg.brewDeltaState) 
+      {
+        //float tempDelta = TEMP_DELTA(brewTempSetPoint, currentState);
+          float tempDelta = brewTempSetPoint/10;
+
+        float BREW_TEMP_DELTA = mapRange(sensorTemperature, brewTempSetPoint, brewTempSetPoint + tempDelta, tempDelta, 0, 0);
+        deltaOffset = constrain(BREW_TEMP_DELTA, 0, tempDelta);
+      }
+      if (sensorTemperature <= brewTempSetPoint + deltaOffset) {
+
+        // pulseHeaters(runningCfg.hpwr, runningCfg.mainDivider, runningCfg.brewDivider, brewActive);
+         pulseHeaters(1000, 5, 3, brewActive);
+         gOutputPwr=60;
+      } else {
+        gOutputPwr=0;
+        
+        setBoilerOff();
+      }
+    }
+  } else { //if brewState == false
+    if (sensorTemperature <= ((float)brewTempSetPoint - 30.f)) {
+      setBoilerOn();
+      gOutputPwr=100; //added by itcoffee
+    } else {
+      // int HPWR_LOW = runningCfg.hpwr / runningCfg.mainDivider;
+      int HPWR_LOW = 1000 / 5;
+
+      // Calculating the boiler heating power range based on the below input values
+      //int HPWR_OUT = mapRange(sensorTemperature, brewTempSetPoint - 30, brewTempSetPoint, runningCfg.hpwr, HPWR_LOW, 0);
+      int HPWR_OUT = mapRange(sensorTemperature, brewTempSetPoint - 30, brewTempSetPoint, 1000, HPWR_LOW, 0);
+
+     // HPWR_OUT = constrain(HPWR_OUT, HPWR_LOW, runningCfg.hpwr);  // limits range of sensor values to HPWR_LOW and HPWR
+      HPWR_OUT = constrain(HPWR_OUT, HPWR_LOW, 1000);  // limits range of sensor values to HPWR_LOW and HPWR
+      if (sensorTemperature <= ((float)brewTempSetPoint - 5.f)) {
+      //  pulseHeaters(HPWR_OUT, 1, runningCfg.mainDivider, brewActive);
+      gOutputPwr=HPWR_OUT*100/1000; //added by itcoffee
+       pulseHeaters(HPWR_OUT, 1, 5, brewActive);
+
+      } else if (sensorTemperature < ((float)brewTempSetPoint)) {
+       // pulseHeaters(HPWR_OUT,  runningCfg.brewDivider, runningCfg.brewDivider, brewActive);
+        gOutputPwr=HPWR_OUT*100/1000; //added by itcoffee
+          pulseHeaters(HPWR_OUT,  5, 3, brewActive);
+      } else {
+         gOutputPwr=0; //added by itcoffee
+        setBoilerOff();
+      }
+    }
+  }
+  // if (brewActive || !currentState.brewSwitchState) { // keep steam boiler supply valve open while steaming/descale only
+  //   setSteamValveRelayOff();
+  // }
+  // setSteamBoilerRelayOff();
+
+
+
+  
+}
+
+
 
 
 

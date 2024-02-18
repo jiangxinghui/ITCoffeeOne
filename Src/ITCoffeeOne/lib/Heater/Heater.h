@@ -3,18 +3,25 @@
 
 
 #include <PID_v1.h>
+#include <Arduino.h>
 
-
-
+enum HeaterMode
+{
+  PowerOff,
+  ExternalControl,
+  AutoPID,
+  ManualPID,
+  Brewing,
+};
   
 class Heater {
 public:
 
 
 
-  #define S_P 0.8
-#define S_I 0.0
-#define S_D 0.0
+  #define S_P 6.0
+#define S_I 200.0
+#define S_D 0.04
 
 #define S_aP 10.0
 #define S_aI 0.0
@@ -22,7 +29,7 @@ public:
 
 
 
-#define S_TSET 30.0
+#define S_TSET 80.0
 
 #define S_TBAND 10 //change from 1.5 , overshort 
 
@@ -34,6 +41,7 @@ double gTargetTemp = S_TSET;
 double gOvershoot = S_TBAND;
 double gInputTemp = 20.0;
 double gOutputPwr = 0.0;
+
 double gP = S_P, gI = S_I, gD = S_D;
 
 
@@ -41,17 +49,27 @@ double gP = S_P, gI = S_I, gD = S_D;
 float heatcycles; // the number of millis out of 1000 for the current heat amount (percent * 10)
 
  bool heaterState = 0;
+
+ //for gag
+    uint32_t heaterWave;
+   bool heaterState2;
+
+
 unsigned long heatCurrentTime = 0, heatLastTime = 0;
 
 
 
-int gButtonState = 0;
+
 
 
 bool tuning = false;
 bool osmode = false;
 bool poweroffMode = false;
 bool externalControlMode = false;
+
+
+
+
 
 
 //char Status[256];
@@ -72,6 +90,7 @@ int tune_count = 0;
 
 void loop();
 
+void justDoCoffee(float targetTemperature,float temperature, const bool brewActive);
 
 
 private:
@@ -99,7 +118,12 @@ void updateHeater();
 
 
 void turnHeatElementOnOff(bool on) ;
+void setBoilerOff(void) ;
+void setBoilerOn(void) ;
+
  void setHeatPowerPercentage(float power);
+
+void pulseHeaters(const uint32_t pulseLength, const int factor_1, const int factor_2, const bool brewActive);
 
 
 };

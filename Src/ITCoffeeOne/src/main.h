@@ -2,7 +2,7 @@
 
 
 #include "peripherals/thermocouple.h"
-
+#include "sensors_state.h"
 
 
 #include <SoftwareSerial.h>

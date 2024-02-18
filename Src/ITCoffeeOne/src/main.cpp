@@ -1,6 +1,6 @@
 #include <main.h>
 #include "Heater.h"
-
+#include "peripherals/peripherals.h"
 
 
 
@@ -17,7 +17,7 @@ ModbusRTUSlave modbus(mySerial);
 
 uint16_t holdingRegisters[10];
 bool coils[2];
-
+SensorState currentState;
 
 Heater myHeater;
  double temperature;
@@ -83,7 +83,7 @@ thermocoupleInit();
    xTaskCreate(
     TaskHeater
     ,  "heater task "
-    ,  128  // Stack size
+    ,  140  // Stack size
     ,  NULL
     ,  3  // Priority
     ,  NULL );
@@ -120,11 +120,23 @@ return temp;
  
 
 }
-
-static float sensorsRead(void){
-
- return sensorsReadTemperature();
+static void sensorReadSwitches(void) {
+  currentState.brewSwitchState = brewState();
+ // currentState.steamSwitchState = steamState();
+ // currentState.hotWaterSwitchState = waterPinState() || (currentState.brewSwitchState && currentState.steamSwitchState); // use either an actual switch, or the GC/GCP switch combo
 }
+
+static void sensorsRead(void){
+
+sensorReadSwitches();
+
+ temperature= sensorsReadTemperature();
+}
+
+
+
+
+
 void loop()
 {
 
@@ -152,7 +164,7 @@ pinMode(LED_BUILTIN,OUTPUT);
   {
   digitalWrite(LED_BUILTIN,!digitalRead(LED_BUILTIN));
 
-    temperature  =  sensorsRead();
+ sensorsRead();
 
    holdingRegisters[1]=temperature*10;
 
@@ -166,6 +178,8 @@ holdingRegisters[7]=myHeater.tune_count;
 
 
 holdingRegisters[8]=myHeater.osmode;
+holdingRegisters[9]=brewState();
+
 
       modbus.poll();
 
@@ -206,13 +220,14 @@ myHeater.gOutputPwr=0;
   for (;;)
   {
 
- 
-
-  myHeater.gTargetTemp=(double)holdingRegisters[0]/10; 
-  myHeater.gInputTemp=(double)holdingRegisters[1]/10;
+ myHeater.justDoCoffee(holdingRegisters[0]/10, temperature,currentState.brewSwitchState);
 
 
-  myHeater.loop();
+  // myHeater.gTargetTemp=(double)holdingRegisters[0]/10; 
+  // myHeater.gInputTemp=(double)holdingRegisters[1]/10;
+
+
+  // myHeater.loop();
  
    digitalWrite(HeaterPin,myHeater.heaterState);
 

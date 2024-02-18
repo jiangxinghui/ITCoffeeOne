@@ -12,7 +12,7 @@
 #define thermoCLK     PA5   //nano d8
 
 // #define zcPin         PA0
-// #define brewPin       PC14
+ #define brewPin       PC14  //nano Rst->D7
 // #define relayPin      PA15
  #define HeaterPin     PA15 //nano a1
 // #define steamPin      PC15
@@ -65,7 +65,7 @@
 #define bt_txPin       10
 #define bt_rxPin     12
 
-
+#define brewPin       7
 
 #endif  //end stm32 board
 
