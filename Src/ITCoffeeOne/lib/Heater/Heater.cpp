@@ -1,6 +1,6 @@
 #include "Heater.h"
 #include <Arduino.h>
-#include <FreeRTOSConfig.h>
+
 
 #include "utils.h"
 
@@ -181,17 +181,25 @@ void Heater::loop()
 }
 
 void Heater::updateHeater() {
- 
+   time_now=millis();
   heatCurrentTime = time_now;
-  if (heatCurrentTime - heatLastTime >= HEATER_INTERVAL or heatLastTime > heatCurrentTime) { //second statement prevents overflow errors
+
+   if (heatCurrentTime - heatLastTime >= HEATER_INTERVAL or heatLastTime > heatCurrentTime) { //second statement prevents overflow errors
+  
     // begin cycle
-    Serial.println("1");
+  
     turnHeatElementOnOff(1);  //
     heatLastTime = heatCurrentTime;
   }
   if (heatCurrentTime - heatLastTime >= heatcycles) {
+  
+
+    
     turnHeatElementOnOff(0);
   }
+
+  
+    
 }
 void Heater::turnHeatElementOnOff(bool on) {
   //digitalWrite(HeaterPin, on); //turn pin high , change to main.cpp
@@ -199,15 +207,6 @@ void Heater::turnHeatElementOnOff(bool on) {
   
 }
 
-void Heater::setBoilerOn()
-{
-  heaterState=true;
-}
-
-void Heater::setBoilerOff()
-{
-  heaterState=false;
-}
 
 void Heater::tuning_loop() {
   
@@ -246,15 +245,15 @@ void Heater::tuning_loop() {
   // store min / max
   if ((gInputTemp > (gTargetTemp - (aTuneThres / 2))) && (gInputTemp < (gTargetTemp + (aTuneThres / 2)))) {
     if (maxUpperT != 0) {
-      Serial.println("Adding new upper T");
-      Serial.println(maxUpperT);
+     // Serial.println("Adding new upper T");
+    //  Serial.println(maxUpperT);
       AvgUpperT += maxUpperT;
       UpperCnt ++;
       maxUpperT = 0;
     }
     if (minLowerT != 0) {
-      Serial.println("Adding new lower T");
-      Serial.println(minLowerT);
+    //  Serial.println("Adding new lower T");
+     // Serial.println(minLowerT);
       AvgLowerT += minLowerT;
       LowerCnt ++;
       minLowerT = 0;
@@ -268,19 +267,16 @@ void Heater::pulseHeaters(const uint32_t pulseLength, const int factor_1, const 
 
    uint32_t interval;
    int boilerOn;
-
-
-
-
+ 
   if (!heaterState2 && ((millis() - heaterWave) > (pulseLength * factor_1))) {
-    brewActive ? setBoilerOff() : setBoilerOn();
+    brewActive ? turnHeatElementOnOff(0) : turnHeatElementOnOff(1);
         brewActive ? boilerOn=0 : boilerOn=10;
     heaterState2=!heaterState2;
   interval=pulseLength * factor_1;
 
     heaterWave=millis();
   } else if (heaterState2 && ((millis() - heaterWave) > (pulseLength / factor_2))) {
-    brewActive ? setBoilerOn() : setBoilerOff();
+    brewActive ? turnHeatElementOnOff(1) : turnHeatElementOnOff(0);
          brewActive ? boilerOn=10 : boilerOn=0;
     heaterState2=!heaterState2;
       interval=pulseLength / factor_2;
@@ -299,15 +295,16 @@ void Heater::justDoCoffee(float targetTemperature,float temperature, const bool 
   float sensorTemperature = temperature;// + runningCfg.offsetTemp;
 
   if (brewActive) { //if brewState == true
-  
+    //all power beyond 5degree when brew
     if(sensorTemperature <= brewTempSetPoint - 5.f) {
      
      gOutputPwr=100; //added by itcoffee
 
-      setBoilerOn();
+      turnHeatElementOnOff(1);
     } else 
     
     {
+      //inside 5 degree when brew:
       float deltaOffset = 0.f;
      // if (runningCfg.brewDeltaState) 
       {
@@ -320,17 +317,19 @@ void Heater::justDoCoffee(float targetTemperature,float temperature, const bool 
       if (sensorTemperature <= brewTempSetPoint + deltaOffset) {
 
         // pulseHeaters(runningCfg.hpwr, runningCfg.mainDivider, runningCfg.brewDivider, brewActive);
+        gOutputPwr=90;
+
          pulseHeaters(1000, 5, 3, brewActive);
-         gOutputPwr=60;
+       
       } else {
         gOutputPwr=0;
         
-        setBoilerOff();
+            turnHeatElementOnOff(0);
       }
     }
   } else { //if brewState == false
     if (sensorTemperature <= ((float)brewTempSetPoint - 30.f)) {
-      setBoilerOn();
+         turnHeatElementOnOff(1);
       gOutputPwr=100; //added by itcoffee
     } else {
       // int HPWR_LOW = runningCfg.hpwr / runningCfg.mainDivider;
@@ -344,16 +343,20 @@ void Heater::justDoCoffee(float targetTemperature,float temperature, const bool 
       HPWR_OUT = constrain(HPWR_OUT, HPWR_LOW, 1000);  // limits range of sensor values to HPWR_LOW and HPWR
       if (sensorTemperature <= ((float)brewTempSetPoint - 5.f)) {
       //  pulseHeaters(HPWR_OUT, 1, runningCfg.mainDivider, brewActive);
-      gOutputPwr=HPWR_OUT*100/1000; //added by itcoffee
+      
+      gOutputPwr=HPWR_OUT/10*20/100;  // 1. scale 1000hpr->100 percent. /10. 2.1/5=20%
        pulseHeaters(HPWR_OUT, 1, 5, brewActive);
 
       } else if (sensorTemperature < ((float)brewTempSetPoint)) {
        // pulseHeaters(HPWR_OUT,  runningCfg.brewDivider, runningCfg.brewDivider, brewActive);
-        gOutputPwr=HPWR_OUT*100/1000; //added by itcoffee
-          pulseHeaters(HPWR_OUT,  5, 3, brewActive);
+       
+          gOutputPwr=HPWR_OUT/10*10/100;
+          pulseHeaters(HPWR_OUT,  3, 3, brewActive);
+       
+
       } else {
          gOutputPwr=0; //added by itcoffee
-        setBoilerOff();
+            turnHeatElementOnOff(0);
       }
     }
   }
@@ -361,8 +364,11 @@ void Heater::justDoCoffee(float targetTemperature,float temperature, const bool 
   //   setSteamValveRelayOff();
   // }
   // setSteamBoilerRelayOff();
+ 
 
-
+ //test only
+// setHeatPowerPercentage(gOutputPwr);
+// updateHeater( );  //use our heater cycle
 
   
 }

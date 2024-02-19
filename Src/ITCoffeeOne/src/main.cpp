@@ -9,6 +9,7 @@
 ModbusRTUSlave modbus(USART_Modbus);
 #else
 
+
 SoftwareSerial mySerial(bt_rxPin,bt_txPin);
 
 ModbusRTUSlave modbus(mySerial);
@@ -23,14 +24,24 @@ Heater myHeater;
  double temperature;
 
 
-void TaskModbus( void *pvParameters );
-void TaskAnalogRead( void *pvParameters );
-void TaskHeater( void *pvParameters );
-void TaskAnalog( void *pvParameters );
+
 
 // the setup function runs once when you press reset or power the board
 void setup() {
 
+#ifdef STM32_BOARD
+
+#else
+debug_init();
+
+#endif
+
+
+
+pinMode(HeaterPin,OUTPUT);
+myHeater.gOutputPwr=0;
+
+pinMode(LED_BUILTIN,OUTPUT);
 
 coils[0]=false;
 coils[1]=false;
@@ -52,72 +63,26 @@ thermocoupleInit();
 #endif
 
 
-#ifdef STM32_BOARD
-
-
-#else
-//for uno debug
-  //initialize serial communication at 9600 bits per second:
-  Serial.begin(9600);
-  
-  while (!Serial) {
-    ; // wait for serial port to connect. Needed for native USB, on LEONARDO, MICRO, YUN, and other 32u4 based boards.
-  }
-
-
-#endif
 
 
 
 
-  // Now set up two tasks to run independently.
-  xTaskCreate(
-    TaskModbus
-    ,  "Modbus"   // A name just for humans
-    ,  128  // This stack size can be checked & adjusted by reading the Stack Highwater
-    ,  NULL
-    ,  1  // Priority, with 3 (configMAX_PRIORITIES - 1) being the highest, and 0 being the lowest.
-    , NULL );
 
-
-   xTaskCreate(
-    TaskHeater
-    ,  "heater task "
-    ,  140  // Stack size
-    ,  NULL
-    ,  3  // Priority
-    ,  NULL );
-
-
-
-
-// xTaskCreate(
-//     Task500ms
-//     ,  "500ms task "
-//     ,  64  // Stack size
-//     ,  NULL
-//     ,  1  // Priority
-//     ,  NULL );
-
-#ifdef STM32_BOARD
-  // start scheduler
-  vTaskStartScheduler();
-  #endif
 
 
   // Now the task scheduler, which takes over control of scheduling individual tasks, is automatically started.
 }
-static float sensorsReadTemperature(void) {
+static void sensorsReadTemperature(void) {
 
-
+ if (millis() > thermoTimer) {
    // currentState.temperature = thermocoupleRead() - runningCfg.offsetTemp;  //changed by xhjiang
  
-  float temp= thermocoupleRead() ;
+ temperature= thermocoupleRead() ;
+
+  thermoTimer = millis() + GET_KTYPE_READ_EVERY;
 
 
-
-return temp;
- 
+ }
 
 }
 static void sensorReadSwitches(void) {
@@ -130,39 +95,30 @@ static void sensorsRead(void){
 
 sensorReadSwitches();
 
- temperature= sensorsReadTemperature();
+ sensorsReadTemperature();
 }
 
+static void heartBeat(void)
+{
+  uint32_t elapsedTime=millis()-HeartBeatTimer;
+  if(elapsedTime>500)
+  {
+  digitalWrite(LED_BUILTIN,!digitalRead(LED_BUILTIN));
 
+  HeartBeatTimer=millis();
+
+
+
+  }
+
+
+}
 
 
 
 void loop()
 {
-
-}
-
-
-
-  
-
-
-
-/*--------------------------------------------------*/
-/*---------------------- Tasks ---------------------*/
-/*--------------------------------------------------*/
-
-
-void TaskModbus(void *pvParameters)  // This is a task.
-{
-  (void) pvParameters;
-
-pinMode(LED_BUILTIN,OUTPUT);
-
-
-  for (;;) // A Task shall never return or exit.
-  {
-  digitalWrite(LED_BUILTIN,!digitalRead(LED_BUILTIN));
+  heartBeat();
 
  sensorsRead();
 
@@ -182,45 +138,7 @@ holdingRegisters[9]=brewState();
 
 
       modbus.poll();
-
-
-    if(coils[0]==true)
-    {myHeater.tuning_on();
-    coils[0]=false;
-    Serial.println("start tune");
-    }
-
-   if(coils[1]==true)
-    {myHeater.tuning_off();
-    Serial.println("stop tune");
-    coils[1]=false;
-   }
-
-
-
-vTaskDelay(200 / portTICK_PERIOD_MS);  
-  }
-}
-
-
-
-
-
-
-void TaskHeater(void *pvParameters)  // This is a task.
-{
-  (void) pvParameters;
-
-
-
-pinMode(HeaterPin,OUTPUT);
-myHeater.gOutputPwr=0;
-
-
-  for (;;)
-  {
-
- myHeater.justDoCoffee(holdingRegisters[0]/10, temperature,currentState.brewSwitchState);
+myHeater.justDoCoffee(holdingRegisters[0]/10, temperature,currentState.brewSwitchState);
 
 
   // myHeater.gTargetTemp=(double)holdingRegisters[0]/10; 
@@ -228,12 +146,35 @@ myHeater.gOutputPwr=0;
 
 
   // myHeater.loop();
- 
+
    digitalWrite(HeaterPin,myHeater.heaterState);
 
 
-    vTaskDelay(100 / portTICK_PERIOD_MS);  
-  }
+    if(coils[0]==true)
+    {myHeater.tuning_on();
+    coils[0]=false;
+
+   // Serial.println("start tune");
+
+    }
+
+   if(coils[1]==true)
+    {myHeater.tuning_off();
+
+   // Serial.println("stop tune");
+
+    coils[1]=false;
+
+    }
 }
+
+
+
+  
+
+
+
+
+
 
 
