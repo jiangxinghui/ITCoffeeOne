@@ -6,6 +6,16 @@
 #include <Arduino.h>
 
 
+static inline void pinInit( void )
+{
+  pinMode(brewPin,INPUT_PULLUP);
+
+pinMode(HeaterPin,OUTPUT);
+
+
+pinMode(LED_BUILTIN,OUTPUT);
+}
+
 //Function to get the state of the brew switch button
 //returns true or false based on the read P(power) value
 static inline bool brewState(void) {

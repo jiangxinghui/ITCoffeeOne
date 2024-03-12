@@ -2,7 +2,7 @@
 #define Heater_header
 
 
-#include <PID_v1.h>
+//#include <PID_v1.h>
 #include <Arduino.h>
 
 enum HeaterMode
@@ -29,13 +29,13 @@ public:
 
 
 
-#define S_TSET 80.0
+#define S_TSET 90.0
 
 #define S_TBAND 10 //change from 1.5 , overshort 
 
 
 #define PID_INTERVAL 200
-#define HEATER_INTERVAL 1000
+#define HEATER_INTERVAL 200
 
 double gTargetTemp = S_TSET;
 double gOvershoot = S_TBAND;
@@ -52,7 +52,7 @@ float heatcycles; // the number of millis out of 1000 for the current heat amoun
 
  //for gag
     uint32_t heaterWave;
-   bool heaterState2;
+
 
 
 unsigned long heatCurrentTime = 0, heatLastTime = 0;
@@ -74,7 +74,7 @@ bool externalControlMode = false;
 
 //char Status[256];
 
-  Heater();
+  Heater(int hpwr);
 
   void initialize();
 
@@ -94,7 +94,14 @@ void justDoCoffee(float targetTemperature,float temperature, const bool brewActi
 
 
 private:
-PID myPID;
+
+//
+int hpwr;
+int mainDivider;
+int brewDivider;
+float maxHeatTemperature;
+
+//PID myPID;
 
 double aTuneStep = 10.0, aTuneThres = 1.0; //change atunethres from 0.2 to 1.0
 
