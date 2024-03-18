@@ -3,9 +3,9 @@
 #include "peripherals/peripherals.h"
 #include "ADS1X15.h"
 #include "internal_watchdog.h"
-#include "eeprom_data/eeprom_data.h"
+
 #include "system_state.h"
-#include "profiling_phases.h"
+
 
 void updateProfilerPhases(void) ;
 
@@ -13,14 +13,14 @@ SimpleKalmanFilter smoothPressure(0.6f, 0.6f, 0.1f);
 SimpleKalmanFilter smoothPumpFlow(0.1f, 0.1f, 0.01f);
 SimpleKalmanFilter smoothConsideredFlow(0.1f, 0.1f, 0.1f);
 
-Profile profile;
-PhaseProfiler phaseProfiler{profile};
 
-PredictiveWeight predictiveWeight;
 SensorState currentState;
 OPERATION_MODES selectedOperationalMode;
 
-eepromValues_t runningCfg;
+//eepromValues_t runningCfg;
+
+
+
 SystemState systemState;
 
  float pumpPct_Output;
@@ -68,17 +68,17 @@ static void heartBeat(void)
 
 
 }
-static void cpsInit(eepromValues_t &eepromValues) {
+static void cpsInit() {
   int cps = getCPS();
-  if (cps > 110) { // double 60 Hz
-    eepromValues.powerLineFrequency = 60u;
-  } else if (cps > 80) { // double 50 Hz
-    eepromValues.powerLineFrequency = 50u;
-  } else if (cps > 55) { // 60 Hz
-    eepromValues.powerLineFrequency = 60u;
-  } else if (cps > 0) { // 50 Hz
-    eepromValues.powerLineFrequency = 50u;
-  }
+  // if (cps > 110) { // double 60 Hz
+  //   powerLineFrequency = 60u;
+  // } else if (cps > 80) { // double 50 Hz
+  //   powerLineFrequency = 50u;
+  // } else if (cps > 55) { // 60 Hz
+  //   powerLineFrequency = 60u;
+  // } else if (cps > 0) { // 50 Hz
+  //   powerLineFrequency = 50u;
+  // }
 }
 
 // the setup function runs once when you press reset or power the board
@@ -109,10 +109,9 @@ setPumpOff();
 
 
  // Initialising the saved values or writing defaults if first start
-eepromInit();
-runningCfg = eepromGetCurrentValues();
 
-cpsInit(runningCfg);
+
+cpsInit();
 
 thermocoupleInit();
 adsInit();
@@ -150,160 +149,10 @@ holdingRegisters[7]=2;  //flow setpoint
 }
 
 
-void addPhase(PHASE_TYPE type, Transition target, float restriction, int timeMs, float pressureAbove, float pressureBelow, float shotWeight, float isWaterPumped) {
- 
- Phase* phase=new Phase
- 
-{
-    .type           = type,
-    .target         = target,
-    .restriction    = restriction,
-   // .stopConditions = PhaseStopConditions{ .time=timeMs, .pressureAbove=pressureAbove, .pressureBelow=pressureBelow, .weight=shotWeight, .waterPumpedInPhase=isWaterPumped }
-  };
-
-    profile.addPhase(phase );
-}
-
-
-void addPressurePhase(Transition pressure, float flowRestriction, int timeMs, float pressureAbove, float pressureBelow, float shotWeight, float isWaterPumped) {
-  addPhase(PHASE_TYPE::PHASE_TYPE_PRESSURE, pressure, flowRestriction, timeMs, pressureAbove, pressureBelow, shotWeight, isWaterPumped);
-}
-
-void addFlowPhase(Transition flow, float pressureRestriction, int timeMs, float pressureAbove, float pressureBelow, float shotWeight, float isWaterPumped) {
-  addPhase(PHASE_TYPE::PHASE_TYPE_FLOW, flow, pressureRestriction, timeMs, pressureAbove, pressureBelow, shotWeight, isWaterPumped);
-}
 
 
 
 
-void addPreinfusionPhases() {
-  if (ACTIVE_PROFILE(runningCfg).preinfusionFlowState) { // flow based PI enabled
-    float isPressureAbove = ACTIVE_PROFILE(runningCfg).preinfusionPressureAbove ? ACTIVE_PROFILE(runningCfg).preinfusionFlowPressureTarget : -1.f;
-    float isWeightAbove = ACTIVE_PROFILE(runningCfg).preinfusionWeightAbove > 0.f ? ACTIVE_PROFILE(runningCfg).preinfusionWeightAbove : -1.f;
-    float isWaterPumped = ACTIVE_PROFILE(runningCfg).preinfusionFilled > 0.f ? ACTIVE_PROFILE(runningCfg).preinfusionFilled : -1.f;
-
-    addFlowPhase(Transition{ ACTIVE_PROFILE(runningCfg).preinfusionFlowVol }, ACTIVE_PROFILE(runningCfg).preinfusionFlowPressureTarget, ACTIVE_PROFILE(runningCfg).preinfusionFlowTime * 1000, isPressureAbove, -1, isWeightAbove, isWaterPumped);
-  }
-  else { // pressure based PI enabled
-    // For now handling phase switching on restrictions here but as this grow will have to deal with it otherwise.
-    float isPressureAbove = ACTIVE_PROFILE(runningCfg).preinfusionPressureAbove ? ACTIVE_PROFILE(runningCfg).preinfusionBar : -1.f;
-    float isWeightAbove = ACTIVE_PROFILE(runningCfg).preinfusionWeightAbove > 0.f ? ACTIVE_PROFILE(runningCfg).preinfusionWeightAbove : -1.f;
-    float isWaterPumped = ACTIVE_PROFILE(runningCfg).preinfusionFilled > 0.f ? ACTIVE_PROFILE(runningCfg).preinfusionFilled : -1.f;
-
-    addPressurePhase(Transition{ ACTIVE_PROFILE(runningCfg).preinfusionBar }, ACTIVE_PROFILE(runningCfg).preinfusionPressureFlowTarget, ACTIVE_PROFILE(runningCfg).preinfusionSec * 1000, isPressureAbove, -1, isWeightAbove, isWaterPumped);
-  }
-}
-
-void addMainExtractionPhasesAndRamp() {
-  int rampPhaseIndex = -1;
-
-  if (ACTIVE_PROFILE(runningCfg).profilingState) {
-    if (ACTIVE_PROFILE(runningCfg).tpState) {
-      // ----------------- Transition Profile ----------------- //
-      if (ACTIVE_PROFILE(runningCfg).tpType) { // flow based profiling enabled
-        /* Setting the phase specific restrictions */
-        /* ------------------------------------------ */
-        float fpStart = ACTIVE_PROFILE(runningCfg).tfProfileStart;
-        float fpEnd = ACTIVE_PROFILE(runningCfg).tfProfileEnd;
-        uint16_t fpHold = ACTIVE_PROFILE(runningCfg).tfProfileHold * 1000;
-        float holdLimit = ACTIVE_PROFILE(runningCfg).tfProfileHoldLimit > 0.f ? ACTIVE_PROFILE(runningCfg).tfProfileHoldLimit : -1;
-        TransitionCurve curve = (TransitionCurve)ACTIVE_PROFILE(runningCfg).tfProfileSlopeShape;
-        uint16_t curveTime = ACTIVE_PROFILE(runningCfg).tfProfileSlope * 1000;
-        /* ------------------------------------------ */
-
-        if (fpStart > 0.f && fpHold > 0) {
-          addFlowPhase(Transition{ fpStart }, holdLimit, fpHold, -1, -1, -1, -1);
-          rampPhaseIndex = rampPhaseIndex > 0 ? rampPhaseIndex : profile.phaseCount() - 1;
-        }
-        addFlowPhase(Transition{ fpStart, fpEnd, curve, curveTime }, ACTIVE_PROFILE(runningCfg).tfProfilingPressureRestriction, curveTime, -1, -1, -1, -1);
-        rampPhaseIndex = rampPhaseIndex > 0 ? rampPhaseIndex : profile.phaseCount() - 1;
-      }
-      else { // pressure based profiling enabled
-        /* Setting the phase specific restrictions */
-        /* ------------------------------------------ */
-        float ppStart = ACTIVE_PROFILE(runningCfg).tpProfilingStart;
-        float ppEnd = ACTIVE_PROFILE(runningCfg).tpProfilingFinish;
-        uint16_t ppHold = ACTIVE_PROFILE(runningCfg).tpProfilingHold * 1000;
-        float holdLimit = ACTIVE_PROFILE(runningCfg).tpProfilingHoldLimit > 0.f ? ACTIVE_PROFILE(runningCfg).tpProfilingHoldLimit : -1;
-        TransitionCurve curve = (TransitionCurve)ACTIVE_PROFILE(runningCfg).tpProfilingSlopeShape;
-        uint16_t curveTime = ACTIVE_PROFILE(runningCfg).tpProfilingSlope * 1000;
-        /* ------------------------------------------ */
-
-        if (ppStart > 0.f && ppHold > 0) {
-          addPressurePhase(Transition{ ppStart }, holdLimit, ppHold, -1, -1, -1, -1);
-          rampPhaseIndex = rampPhaseIndex > 0 ? rampPhaseIndex : profile.phaseCount() - 1;
-        }
-        addPressurePhase(Transition{ ppStart, ppEnd, curve, curveTime }, ACTIVE_PROFILE(runningCfg).tpProfilingFlowRestriction, curveTime, -1, -1, -1, -1);
-        rampPhaseIndex = rampPhaseIndex > 0 ? rampPhaseIndex : profile.phaseCount() - 1;
-      }
-    }
-
-    // ----------------- Main Profile ----------------- //
-    if (ACTIVE_PROFILE(runningCfg).mfProfileState) { // flow based profiling enabled
-      /* Setting the phase specific restrictions */
-      /* ------------------------------------------ */
-      float fpStart = ACTIVE_PROFILE(runningCfg).mfProfileStart;
-      float fpEnd = ACTIVE_PROFILE(runningCfg).mfProfileEnd;
-      TransitionCurve curve = (TransitionCurve)ACTIVE_PROFILE(runningCfg).mfProfileSlopeShape;
-      uint16_t curveTime = ACTIVE_PROFILE(runningCfg).mfProfileSlope * 1000;
-
-      /* ------------------------------------------ */
-      addFlowPhase(Transition(fpStart, fpEnd, curve, curveTime), ACTIVE_PROFILE(runningCfg).mfProfilingPressureRestriction, -1, -1, -1, -1, -1);
-    }
-    else { // pressure based profiling enabled
-      /* Setting the phase specific restrictions */
-      /* ------------------------------------------ */
-      float ppStart = ACTIVE_PROFILE(runningCfg).mpProfilingStart;
-      float ppEnd = ACTIVE_PROFILE(runningCfg).mpProfilingFinish;
-      TransitionCurve curve = (TransitionCurve)ACTIVE_PROFILE(runningCfg).mpProfilingSlopeShape;
-      uint16_t curveTime = ACTIVE_PROFILE(runningCfg).mpProfilingSlope * 1000;
-      /* ------------------------------------------ */
-      addPressurePhase(Transition(ppStart, ppEnd, curve, curveTime), ACTIVE_PROFILE(runningCfg).mpProfilingFlowRestriction, -1, -1, -1, -1, -1);
-    }
-  } else { // Shot profiling disabled. Default to 9 bars
-    addPressurePhase(Transition(9.f), -1, -1, -1, -1, -1, -1);
-  }
-
-  rampPhaseIndex = rampPhaseIndex > 0 ? rampPhaseIndex : profile.phaseCount() - 1;
- // insertRampPhaseIfNeeded(rampPhaseIndex);
-}
-
-
-
-
-
- void updateProfilerPhases(void) {
-  float shotTarget = -1.f;
-
-  if (ACTIVE_PROFILE(runningCfg).stopOnWeightState) {
-    shotTarget = (ACTIVE_PROFILE(runningCfg).shotStopOnCustomWeight < 1.f)
-      ? ACTIVE_PROFILE(runningCfg).shotDose * ACTIVE_PROFILE(runningCfg).shotPreset
-      : ACTIVE_PROFILE(runningCfg).shotStopOnCustomWeight;
-  }
-
-  //update global stop conditions (currently only stopOnWeight is configured in nextion)
-  //profile.globalStopConditions = GlobalStopConditions{ .weight=shotTarget };
-
-  profile.clear();
-
-  //Setup release pressure + fill@7ml/sec
-  if (runningCfg.basketPrefill) {
-  //  addFillBasketPhase(7.f);
-  }
-
-  // Setup pre-infusion if needed
-  if (ACTIVE_PROFILE(runningCfg).preinfusionState) {
-    addPreinfusionPhases();
-  }
-
-  // Setup the soak phase if neecessary
-  if (ACTIVE_PROFILE(runningCfg).soakState) {
-  //  addSoakPhase();
-  }
-  preInfusionFinishedPhaseIdx = profile.phaseCount();
-
-  addMainExtractionPhasesAndRamp();
-}
 
 
 
@@ -446,47 +295,6 @@ static long sensorsReadFlow(float elapsedTimeSec) {
 }
 
 
-static void calculateWeightAndFlow(void) {
-  uint32_t elapsedTime = millis() - flowTimer;
-
-  if (brewActive) {
-    // Marking for tare in case smth has gone wrong and it has exited tare already.
-    if (currentState.weight < -.3f) currentState.tarePending = true;
-
-    if (elapsedTime > REFRESH_FLOW_EVERY) {
-      flowTimer = millis();
-      float elapsedTimeSec = elapsedTime / 1000.f;
-      long pumpClicks = sensorsReadFlow(elapsedTimeSec);
-      float consideredFlow = currentState.smoothedPumpFlow * elapsedTimeSec;
-      // Update predictive class with our current phase
-      
-      CurrentPhase& phase = phaseProfiler.getCurrentPhase();
-      predictiveWeight.update(currentState, phase, runningCfg);
-
-      // Start the predictive weight calculations when conditions are true
-      if (predictiveWeight.isOutputFlow() || currentState.weight > 0.4f) {
-        float flowPerClick = getPumpFlowPerClick(currentState.smoothedPressure);
-        float actualFlow = (consideredFlow > pumpClicks * flowPerClick) ? consideredFlow : pumpClicks * flowPerClick;
-        /* Probabilistically the flow is lower if the shot is just started winding up and we're flow profiling,
-        once pressure stabilises around the setpoint the flow is either stable or puck restriction is high af. */
-        //todo: later
-        if ((ACTIVE_PROFILE(runningCfg).mfProfileState || ACTIVE_PROFILE(runningCfg).tpType) && currentState.pressureChangeSpeed > 0.15f) {
-          if ((currentState.smoothedPressure < ACTIVE_PROFILE(runningCfg).mfProfileStart * 0.9f)
-          || (currentState.smoothedPressure < ACTIVE_PROFILE(runningCfg).tfProfileStart * 0.9f)) {
-            actualFlow *= 0.3f;
-          }
-        }
-        currentState.consideredFlow = smoothConsideredFlow.updateEstimate(actualFlow);
-        currentState.shotWeight = currentState.scalesPresent ? currentState.shotWeight : currentState.shotWeight + actualFlow;
-      }
-      currentState.waterPumped += consideredFlow;
-    }
-  } else {
-    currentState.consideredFlow = 0.f;
-    currentState.pumpClicks = getAndResetClickCounter();
-    flowTimer = millis();
-  }
-}
 
 
 
@@ -526,7 +334,7 @@ static void brewDetect(void)
   {
     if(brewActive)
     {
-       CurrentPhase& CurrentPhase=phaseProfiler.getCurrentPhase();
+     //  CurrentPhase& CurrentPhase=phaseProfiler.getCurrentPhase();
 
       // // if(phaseProfiler.isFinished())
       // // {

@@ -11,7 +11,7 @@
 #include "peripherals/pressure_sensor.h"
 #include "ModbusRTUSlave.h"
 #include "Pump.h"
-#include "predictive_weight.h"
+
 
 
 #if defined STM32_BOARD

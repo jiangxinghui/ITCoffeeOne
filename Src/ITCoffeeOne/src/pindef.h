@@ -7,7 +7,7 @@
 
 #define VIN_29
 
-#define STM32_BOARD
+//#define STM32_BOARD
 //#define Simulate_Input
 #if defined(STM32_BOARD)
 // STM32F4 pins definitions
