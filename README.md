@@ -1,8 +1,10 @@
-# ITCoffee One
+# ITCoffee One Lite
 
 ## Project Introduction
 
-ITCoffee One is a DIY coffee machine project, based on the modification of the De'Longhi ECO310 coffee machine. It aims to provide users with a unique experience of making homemade coffee. Through the modification of the ECO310, users can easily create high-quality personalized coffee at home.
+ITCoffee One Lite is a DIY coffee machine project, based on the modification of the De'Longhi ECO310 coffee machine. It aims to provide users with a unique experience of making homemade coffee. Through the modification of the ECO310, users can easily create high-quality personalized coffee at home.
+
+Difference between one and lite, is that lite is based on arduino nano. and limited function included because of RAM size.
 
 ## Usage Instructions
 
@@ -12,10 +14,10 @@ This project is in its early stages.
 
 
 arduino  based: a lot of arduino diy module available.
-freertos: rtos included, and message interchange between boiler controller, pump controller and io controller.
+
 Modbus:  widely used protocol, and IO available easy.  and UI can be IOS, android, etc mobile app, also Industry control HMI.
 
-Now, development started, and vscode+arduino freertos+modbus, is ready.
+Now, development started, and vscode+arduino modbus, is ready.
 
 
 1. Heating control section(developing)
@@ -62,11 +64,13 @@ We encourage everyone to record issues, thoughts, and discussions related to the
 
 
 
-# ITCoffee One
+# ITCoffee One Lite
 
 ## 项目简介
 
-ITCoffee One 是一个 DIY 咖啡机项目，基于德龙 ECO310 咖啡机进行改造。旨在为用户提供自制咖啡的独特体验，通过对 ECO310 的改造，使用户可以在家中轻松制作高质量的个性化咖啡。
+ITCoffee One Lite 是一个 DIY 咖啡机项目，基于德龙 ECO310 咖啡机进行改造。旨在为用户提供自制咖啡的独特体验，通过对 ECO310 的改造，使用户可以在家中轻松制作高质量的个性化咖啡。
+
+区别于ITCoffee One, Lite是基于arduino Nano 硬件。 由于内存限制，只是包括基本功能。
 
 ## 使用说明
 
