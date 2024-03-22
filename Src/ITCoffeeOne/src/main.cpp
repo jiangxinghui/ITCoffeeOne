@@ -158,7 +158,7 @@ void addPhase(PHASE_TYPE type, Transition target, float restriction, int timeMs,
     .type           = type,
     .target         = target,
     .restriction    = restriction,
-    .stopConditions = PhaseStopConditions{ .time=timeMs, .pressureAbove=pressureAbove, .pressureBelow=pressureBelow, .weight=shotWeight, .waterPumpedInPhase=isWaterPumped }
+   // .stopConditions = PhaseStopConditions{ .time=timeMs, .pressureAbove=pressureAbove, .pressureBelow=pressureBelow, .weight=shotWeight, .waterPumpedInPhase=isWaterPumped }
   };
 
     profile.addPhase(phase );
@@ -282,7 +282,7 @@ void addMainExtractionPhasesAndRamp() {
   }
 
   //update global stop conditions (currently only stopOnWeight is configured in nextion)
-  profile.globalStopConditions = GlobalStopConditions{ .weight=shotTarget };
+  //profile.globalStopConditions = GlobalStopConditions{ .weight=shotTarget };
 
   profile.clear();
 
