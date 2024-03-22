@@ -317,17 +317,17 @@ void Heater::justDoCoffee(float targetTemperature,float temperature, const bool 
      // if (runningCfg.brewDeltaState) 
       {
         //float tempDelta = TEMP_DELTA(brewTempSetPoint, currentState);
-          float tempDelta = brewTempSetPoint/10;
+      //    float tempDelta = brewTempSetPoint/10;
 
-        float BREW_TEMP_DELTA = mapRange(sensorTemperature, brewTempSetPoint, brewTempSetPoint + tempDelta, tempDelta, 0, 0);
-        deltaOffset = constrain(BREW_TEMP_DELTA, 0, tempDelta);
+     //   float BREW_TEMP_DELTA = mapRange(sensorTemperature, brewTempSetPoint, brewTempSetPoint + tempDelta, tempDelta, 0, 0);
+      //  deltaOffset = constrain(BREW_TEMP_DELTA, 0, tempDelta);
       }
       if (sensorTemperature <= brewTempSetPoint + deltaOffset) {
 
         // pulseHeaters(runningCfg.hpwr, runningCfg.mainDivider, runningCfg.brewDivider, brewActive);
-        gOutputPwr=(1/(double)brewDivider)/(mainDivider+1/(double)brewDivider)*100;
+        gOutputPwr=50;
 
-         pulseHeaters(hpwr, mainDivider, brewDivider, brewActive);
+         pulseHeaters(hpwr, 1, 1, brewActive);
        
       } else {
         gOutputPwr=0;
