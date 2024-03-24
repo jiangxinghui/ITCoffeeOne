@@ -14,7 +14,11 @@ currently two branchs included:
    stm32 based.full functionality profile included.
     
 
-
+This project is inspired by Gaggiuino. and more
+1. lcd hmi removed. because gaggiuino program couples with lcd deeply, not easy to change to other hmi devices
+2. modbus protocol included. no matter industry control HMI , or ipad, android,  modbus protocol is the only requirement.
+3. software modular. heater , pump , will be separated, and easy to expand when multiple boiler included.
+4. 
 
 ## Usage Instructions
 
@@ -84,6 +88,20 @@ We encourage everyone to record issues, thoughts, and discussions related to the
 
 ITCoffee One 是一个 DIY 咖啡机项目，基于德龙 ECO310 咖啡机进行改造。旨在为用户提供自制咖啡的独特体验，通过对 ECO310 的改造，使用户可以在家中轻松制作高质量的个性化咖啡。
 
+
+目前有两个分支:
+1. itcoffee one lite: 由于arduino nano只有有限的RAM和flash. so ,lite版本只包含简单的功能，用来控制eco310.
+   video : 加热控制   看看【IT咖啡的作品】用arduino控制咖啡机的加热  https://v.douyin.com/iFGxaUU5/ S@Y.MJ 03/31 EHV:/
+   
+3. itcoffee one
+   基于stm32F411, 将会包含全部的功能。 
+    
+
+这个项目灵感来着gaggiuino. 在此基础上
+1. 去掉lcd部分. 因为gaggiuino的程序与lcd结合极深，不宜与移植到其他hmi设备
+2. 增加modbus协议支持。只要支持modbus协议,传统的工控HMI，或者支持modbus的ipad，android程序都可以与之通讯
+4. 软件模块化。 将把软件划分为加热控制模块和泵控模块以及io模块，这样可以容易扩展加热锅炉的数量。
+5. 
 ## 使用说明
 
 本项目 是 一个 刚开始的项目。
