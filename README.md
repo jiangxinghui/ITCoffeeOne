@@ -10,7 +10,7 @@ currently two branchs included:
 1. itcoffee one lite: arduino nano has very limited RAM and Flash. so , lite version contains  limited function, just some basic functionality that control eco310.
    video :
    
-3. itcoffee one
+3. itcoffee one：
    stm32 based.full functionality profile included.
     
 
