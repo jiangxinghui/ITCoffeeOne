@@ -4,6 +4,18 @@
 
 ITCoffee One is a DIY coffee machine project, based on the modification of the De'Longhi ECO310 coffee machine. It aims to provide users with a unique experience of making homemade coffee. Through the modification of the ECO310, users can easily create high-quality personalized coffee at home.
 
+
+
+currently two branchs included:
+1. itcoffee one lite: arduino nano has very limited RAM and Flash. so , lite version contains  limited function, just some basic functionality that control eco310.
+   video :
+   
+3. itcoffee one
+   stm32 based.full functionality profile included.
+    
+
+
+
 ## Usage Instructions
 
 This project is in its early stages.
@@ -12,7 +24,7 @@ This project is in its early stages.
 
 
 arduino  based: a lot of arduino diy module available.
-freertos: rtos included, and message interchange between boiler controller, pump controller and io controller.
+freertos: rtos included, and message interchange between boiler controller, pump controller and io controller. 
 Modbus:  widely used protocol, and IO available easy.  and UI can be IOS, android, etc mobile app, also Industry control HMI.
 
 Now, development started, and vscode+arduino freertos+modbus, is ready.
@@ -20,13 +32,17 @@ Now, development started, and vscode+arduino freertos+modbus, is ready.
 
 1. Heating control section(developing)
    temperature read added. and temperature value is stored to Modbus Holding registers. 
-   pid added, simple one, will optimize it later
    
-2. Pressure control section(future)
 
-3. IO(future)
-4.  PCB board(futrue)
-5. Android iOS APP(developing)
+   video:
+   看看【IT咖啡的作品】用arduino控制咖啡机的加热  https://v.douyin.com/iFGxaUU5/ S@Y.MJ 03/31 EHV:/
+   
+   
+3. Pressure control section(future)
+
+4. IO(future)
+5.  PCB board(futrue)
+6. Android iOS APP(developing)
   maui bluetooth app developing.
 
 ## Contribution
