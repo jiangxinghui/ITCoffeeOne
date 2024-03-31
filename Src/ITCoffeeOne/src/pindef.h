@@ -90,7 +90,7 @@
 #define dimmerPin     3
 #define VR A0
 
-//#define DEBUG_WITH_AVR
+
 
 #endif  //end 
 

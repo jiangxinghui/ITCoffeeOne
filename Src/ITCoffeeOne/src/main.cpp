@@ -5,7 +5,10 @@
 #include "internal_watchdog.h"
 
 #include "system_state.h"
+#ifdef STM32_BOARD
+#else
 
+#endif
 
 void updateProfilerPhases(void) ;
 
@@ -88,11 +91,9 @@ void setup() {
 
 #else
 
-#ifdef DEBUG_WITH_AVR
- debug_init();
- #else
+
 Serial.begin(9600);
- #endif
+
 
 #endif
 
@@ -124,7 +125,7 @@ pumpInit(zcPin,dimmerPin, 50,0.2225f);
 coils[0]=false;
 coils[1]=false;
 
-holdingRegisters[0]=S_TSET*10;  //temp setpoint
+holdingRegisters[0]=90*10;  //temp setpoint
 holdingRegisters[3]=9*10;  //pressure setpoint
 holdingRegisters[7]=2;  //flow setpoint
  modbus.configureHoldingRegisters(holdingRegisters,10);
@@ -373,7 +374,7 @@ static void brewDetect(void)
 
     
     //keep the water at temp
-    myHeater.justDoCoffee(holdingRegisters[0]/10, currentState.temperature,currentState.brewSwitchState);
+    myHeater.justDoCoffee(holdingRegisters[0]/10, currentState.temperature,currentState.brewSwitchState,currentState.pumpFlow);
 
 
   // myHeater.gTargetTemp=(double)holdingRegisters[0]/10; 
@@ -434,6 +435,7 @@ void modbusprocess()
   //holdingRegisters[0]  //temp target setpoint
   holdingRegisters[1]=currentState.temperature*10;
 
+//Serial.println(holdingRegisters[1]);
 
   holdingRegisters[2]=myHeater.gOutputPwr*10;
 
@@ -443,28 +445,13 @@ holdingRegisters[4]=currentState.smoothedPressure*10;
 holdingRegisters[6]=pumpPct_Output*100;
 //holdingRegisters[7]= flow setpoint
 
-holdingRegisters[8]=myHeater.osmode;
+
 holdingRegisters[9]=brewState();
 
 
       modbus.poll();
 
-    if(coils[0]==true)
-    {myHeater.tuning_on();
-    coils[0]=false;
-
-   // Serial.println("start tune");
-
-    }
-
-   if(coils[1]==true)
-    {myHeater.tuning_off();
-
-   // Serial.println("stop tune");
-
-    coils[1]=false;
-
-    }
+   
 }
 
 static void modeSelect(void) {

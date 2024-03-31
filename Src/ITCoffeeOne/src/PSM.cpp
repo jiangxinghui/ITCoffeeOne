@@ -209,15 +209,21 @@ void PSM::initTimer(uint16_t delay, TIM_TypeDef* timerInstance) {
 #else
 
 void PSM::initTimer(uint16_t delay, TimerOne* timerInstance) {
- // Serial.println(delay);
+
+
   uint32_t us = delay > 1000u ? delay : delay > 55u ? 5500u : 6600u;
 //Serial.println(us);
   PSM::_psmIntervalTimer = timerInstance;
   PSM::_psmIntervalTimer->initialize(us);
 
+
+
+
   PSM::_psmIntervalTimer->attachInterrupt(onPSMTimerInterrupt);
 
+
   PSM::_psmIntervalTimerInitialized = true;
+  
 }
 
 

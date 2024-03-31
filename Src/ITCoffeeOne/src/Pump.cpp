@@ -120,10 +120,14 @@ long getAndResetClickCounter(void) {
 
 int getCPS(void) {
  // watchdogReload();
-  unsigned int cps = psm.cps();
+
+  unsigned int cps;
+ 
+ 
+ cps=   psm.cps();
 
  // watchdogReload();
- //cps=100;
+ 
   if (cps > 80u) {
     psm.setDivider(2);
     psm.initTimer(cps > 110u ? 60u : 50u);
