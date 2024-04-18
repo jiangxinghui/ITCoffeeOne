@@ -45,35 +45,52 @@ const float pumpFlowAtZero) {
 
 }
 
-// Function that returns the percentage of clicks the pump makes in it's current phase
+
+
+
+
+/// @brief 获取 达到目标压力 泵需要工作的百分比
+/// @param targetPressure 目标压力
+/// @param flowRestriction 流量限制值。 
+/// @param currentPressure 当前压力
+/// @param currentFlow 当前流量
+/// @param currentPressureChangeSpeed 当前压力变化速度
+/// @return 
 inline float getPumpPct(const float targetPressure, const float flowRestriction, float currentPressure,float currentFlow,float currentPressureChangeSpeed) {
+ //如果目标压力为零，表示泵不用工作，返回0
   if (targetPressure == 0.f) {
       return 0.f;
   }
 
   float diff = targetPressure - currentPressure;
+
+  //根据流量限制和当前压力，计算出达到流量限制的 每秒震动次数
 float clickpersecondforrestrictionflow=getClicksPerSecondForFlow(flowRestriction, currentPressure) ;
 
-
+//达到限制流量，的最大泵工作百分比
   float maxPumpPct = flowRestriction <= 0.f ? 1.f : clickpersecondforrestrictionflow / (float) maxPumpClicksPerSecond;
  
 
-
+//根据当前流量和压力，得出维持流量的泵的压力
   float pumpPctToMaintainFlow = getClicksPerSecondForFlow(currentFlow, currentPressure) / (float) maxPumpClicksPerSecond;
 
+//如果压力差距很大，
   if (diff > 2.f) {
     // return fminf(maxPumpPct, 0.25f + 0.2f * diff);
      return fminf(maxPumpPct, 0.25f + 0.4f * diff);
   }
-
+//如果压力大于0
   if (diff > 0.f) {
     return fminf(maxPumpPct, pumpPctToMaintainFlow * 0.95f + 0.1f + 0.2f * diff);
   }
 
+//如果压力超了 diff<0
+
+  //如果压力增大正在减缓，维持一个最小流量
   if (currentPressureChangeSpeed < 0) {
     return fminf(maxPumpPct, pumpPctToMaintainFlow * 0.2f);
   }
-
+  //否则，停止工作
   return 0;
 }
 
@@ -144,6 +161,10 @@ void pumpPhaseShift(void) {
 
 // Models the flow per click, follows a compromise between the schematic and recorded findings
 // plotted: https://www.desmos.com/calculator/eqynzclagu
+
+/// @brief 在特定压力下，根据一个 泵的流量压力特性曲线，获取每次震动带来的流量。
+/// @param pressure 给定压力
+/// @return 每次震动的流量
 float getPumpFlowPerClick(const float pressure) {
   float fpc = 0.f;
   fpc = (pressureInefficiencyCoefficient[5] / pressure + pressureInefficiencyCoefficient[6]) * ( -pressure * pressure ) + ( flowPerClickAtZeroBar - pressureInefficiencyCoefficient[0]) - (pressureInefficiencyCoefficient[1] + (pressureInefficiencyCoefficient[2] - (pressureInefficiencyCoefficient[3] - pressureInefficiencyCoefficient[4] * pressure) * pressure) * pressure) * pressure;
@@ -156,10 +177,19 @@ float getPumpFlow(const float cps, const float pressure) {
 }
 
 // Currently there is no compensation for pressure measured at the puck, resulting in incorrect estimates
+
+/// @brief 给定压力下，达到目标流量需要每秒震动次数
+/// @param flow 目标流量
+/// @param pressure 当前压力
+/// @return 
 float getClicksPerSecondForFlow(const float flow, const float pressure) {
+ //如果目标流量为零，不需要工作
   if (flow == 0.f) return 0;
+  //获取当前压力下，震动一次的流量
   float flowPerClick = getPumpFlowPerClick(pressure);
+  //目标流量所需要的震动次数
   float cps = flow / flowPerClick;
+  //约束最大震动次数为泵的最大震动次数
   return fminf(cps, (float)maxPumpClicksPerSecond);
 }
 
@@ -168,10 +198,15 @@ float setPumpFlow(const float targetFlow, const float pressureRestriction, float
   float pumpPct ;
   // If a pressure restriction exists then the we go into pressure profile with a flowRestriction
   // which is equivalent but will achieve smoother pressure management
+
+
+  //如果有压力限制，那么在目标流量作为最大流量的约束下，达到目标压力需要的泵perct
   if (pressureRestriction > 0.f && currentPressure > pressureRestriction * 0.5f) {
    pumpPct= setPumpPressure(pressureRestriction, targetFlow, currentPressure,currentFlow,currentPressureChangeSpeed);
   }
   else {
+
+    //否则，不管压力约束，在当前压力情况下达到目标流量的泵工作perct
    pumpPct = getClicksPerSecondForFlow(targetFlow, currentPressure) / (float)maxPumpClicksPerSecond;
     setPumpToRawValue(pumpPct * PUMP_RANGE);
   }
