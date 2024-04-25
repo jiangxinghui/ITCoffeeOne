@@ -16,11 +16,9 @@ PSM::PSM(unsigned char sensePin, unsigned char controlPin, unsigned int range, i
   uint32_t interruptNum = digitalPinToInterrupt(PSM::_sensePin);
 
   if (interruptNum != NOT_AN_INTERRUPT) {
-    #ifdef DEBUG_WITH_AVR
-
-   #else
+ 
    attachInterrupt(interruptNum, onZCInterrupt, mode);
-   #endif
+ 
   }
 
   PSM::_range = range;
@@ -80,6 +78,8 @@ void PSM::onPSMTimerInterrupt(void) {
   #else
   _thePSM->_psmIntervalTimer->stop();
   #endif
+
+  
   _thePSM->updateControl(true);
 }
 

@@ -35,7 +35,7 @@ float heatcycles; // the number of millis out of 1000 for the current heat amoun
 
 unsigned long heatCurrentTime = 0, heatLastTime = 0;
 
-
+unsigned long brewOffTime=0;
 
 
 

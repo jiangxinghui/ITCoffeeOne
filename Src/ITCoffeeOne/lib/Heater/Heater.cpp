@@ -109,15 +109,18 @@ inline static float TEMP_DELTA(float d, float pumpFlow) {
 
 
 void Heater::justDoCoffee(float targetTemperature,float temperature, const bool brewActive,float pumpFlow) {
-
+      
   //float brewTempSetPoint = ACTIVE_PROFILE(runningCfg).setpoint + runningCfg.offsetTemp;
    float brewTempSetPoint = targetTemperature;
   float sensorTemperature = temperature;// + runningCfg.offsetTemp;
  int HPWR_OUT;
 
- 
+ static bool brewActived;
+ time_now=millis();
 
   if (brewActive) { //if brewState == true
+    brewActived=true;
+
     //all power beyond 5degree when brew
     if(sensorTemperature <= brewTempSetPoint - 5.f) {
      
@@ -131,16 +134,18 @@ void Heater::justDoCoffee(float targetTemperature,float temperature, const bool 
       float deltaOffset = 0.f;
      // if (runningCfg.brewDeltaState) 
       {
-        float tempDelta = TEMP_DELTA(brewTempSetPoint, pumpFlow);
-      
+       // float tempDelta = TEMP_DELTA(brewTempSetPoint, pumpFlow);
+     
 
-        float BREW_TEMP_DELTA = mapRange(sensorTemperature, brewTempSetPoint, brewTempSetPoint + tempDelta, tempDelta, 0, 0);
-        deltaOffset = constrain(BREW_TEMP_DELTA, 0, tempDelta);
+    //   float BREW_TEMP_DELTA = mapRange(sensorTemperature, brewTempSetPoint, brewTempSetPoint + tempDelta, tempDelta, 0, 0);
+      //  deltaOffset = constrain(BREW_TEMP_DELTA, 0, tempDelta);
       }
-      if (sensorTemperature <= brewTempSetPoint + deltaOffset) {
+      //if (sensorTemperature <= brewTempSetPoint + deltaOffset) 
+      if (sensorTemperature <= brewTempSetPoint ) 
+      {
 
         // pulseHeaters(runningCfg.hpwr, runningCfg.mainDivider, runningCfg.brewDivider, brewActive);
-        gOutputPwr=0.5*100;
+        gOutputPwr=100;
 
       
        
@@ -151,15 +156,20 @@ void Heater::justDoCoffee(float targetTemperature,float temperature, const bool 
       }
     }
   } else { //if brewState == false
-    if (sensorTemperature <= ((float)brewTempSetPoint - 30.f)) {
+
+  
+    
+      if (sensorTemperature <= ((float)brewTempSetPoint - 30.f)) {
          turnHeatElementOnOff(1);
       gOutputPwr=100; //added by itcoffee
-    } else 
+      } 
+      
+      else 
     
-    {
-if (sensorTemperature <= ((float)brewTempSetPoint - 20.f)) {
+    
+    if (sensorTemperature <= ((float)brewTempSetPoint - 20.f)) {
  
-        gOutputPwr=50;
+        gOutputPwr=60;
 
 
  
@@ -169,11 +179,19 @@ if (sensorTemperature <= ((float)brewTempSetPoint - 20.f)) {
    
       
      
-             gOutputPwr=25;
+             gOutputPwr=40;
 
  
       } 
+      else   if (sensorTemperature <= ((float)brewTempSetPoint - 5.f)) {
+      
    
+      
+     
+             gOutputPwr=20;
+
+ 
+      } 
       
       else if (sensorTemperature < ((float)brewTempSetPoint)) {
      
@@ -186,8 +204,10 @@ if (sensorTemperature <= ((float)brewTempSetPoint - 20.f)) {
          gOutputPwr=0; //added by itcoffee
             turnHeatElementOnOff(0);
       }
-    }
-  }
+    
+    }//brew state =off
+  
+
   // if (brewActive || !currentState.brewSwitchState) { // keep steam boiler supply valve open while steaming/descale only
   //   setSteamValveRelayOff();
   // }
