@@ -127,7 +127,7 @@ coils[1]=false;
 
 holdingRegisters[0]=90*10;  //temp setpoint
 holdingRegisters[3]=9*10;  //pressure setpoint
-holdingRegisters[7]=2;  //flow setpoint
+holdingRegisters[7]=20;  //flow setpoint
  modbus.configureHoldingRegisters(holdingRegisters,10);
 
  modbus.configureCoils(coils, 2);                       // bool array of coil values, number of coils
@@ -239,6 +239,7 @@ static void sensorsReadPressure(void) {
     float result=getPressure();
     if(result!=-1&&result!=-2)
     {
+      Serial.println(result);
       if(result==0)currentState.pressure=1.0;
       else
      currentState.pressure = result;
@@ -297,6 +298,50 @@ static long sensorsReadFlow(float elapsedTimeSec) {
 
 
 
+static void calculateWeightAndFlow(void) {
+  uint32_t elapsedTime = millis() - flowTimer;
+
+  if (brewActive) {
+    // Marking for tare in case smth has gone wrong and it has exited tare already.
+    if (currentState.weight < -.3f) currentState.tarePending = true;
+
+    if (elapsedTime > REFRESH_FLOW_EVERY) {
+      flowTimer = millis();
+      float elapsedTimeSec = elapsedTime / 1000.f;
+      long pumpClicks = sensorsReadFlow(elapsedTimeSec);
+
+      //todo predictiveWeight
+
+
+      float consideredFlow = currentState.smoothedPumpFlow * elapsedTimeSec;
+    //   // Update predictive class with our current phase
+    //   CurrentPhase& phase = phaseProfiler.getCurrentPhase();
+    //   predictiveWeight.update(currentState, phase, runningCfg);
+
+    //   // Start the predictive weight calculations when conditions are true
+    //   if (predictiveWeight.isOutputFlow() || currentState.weight > 0.4f) {
+    //     float flowPerClick = getPumpFlowPerClick(currentState.smoothedPressure);
+    //     float actualFlow = (consideredFlow > pumpClicks * flowPerClick) ? consideredFlow : pumpClicks * flowPerClick;
+    //     /* Probabilistically the flow is lower if the shot is just started winding up and we're flow profiling,
+    //     once pressure stabilises around the setpoint the flow is either stable or puck restriction is high af. */
+    //     if ((ACTIVE_PROFILE(runningCfg).mfProfileState || ACTIVE_PROFILE(runningCfg).tpType) && currentState.pressureChangeSpeed > 0.15f) {
+    //       if ((currentState.smoothedPressure < ACTIVE_PROFILE(runningCfg).mfProfileStart * 0.9f)
+    //       || (currentState.smoothedPressure < ACTIVE_PROFILE(runningCfg).tfProfileStart * 0.9f)) {
+    //         actualFlow *= 0.3f;
+    //       }
+    //     }
+    //     currentState.consideredFlow = smoothConsideredFlow.updateEstimate(actualFlow);
+    //     currentState.shotWeight = currentState.scalesPresent ? currentState.shotWeight : currentState.shotWeight + actualFlow;
+    //   }
+    //   currentState.waterPumped += consideredFlow;
+    }
+  } else {
+    currentState.consideredFlow = 0.f;
+    currentState.smoothedPumpFlow=0.f;
+    currentState.pumpClicks = getAndResetClickCounter();
+    flowTimer = millis();
+  }
+}
 
 
 static void sensorsRead(void){
@@ -305,7 +350,7 @@ sensorReadSwitches();
 
  sensorsReadTemperature();
  sensorsReadPressure();
-//  calculateWeightAndFlow();
+ calculateWeightAndFlow();
 
 }
 
@@ -347,7 +392,8 @@ static void brewDetect(void)
       
       // if(CurrentPhase.getType()==PHASE_TYPE::PHASE_TYPE_PRESSURE){
 
-     // pumpPct_Output= setPumpPressure(holdingRegisters[3]/10 , holdingRegisters[7], currentState.smoothedPressure,currentState.pumpFlow,currentState.pressureChangeSpeed);
+
+      pumpPct_Output= setPumpPressure(holdingRegisters[3]/10 , (double) holdingRegisters[7]/10, currentState.smoothedPressure,currentState.smoothedPumpFlow,currentState.pressureChangeSpeed);
       
       //}
       
@@ -357,7 +403,7 @@ static void brewDetect(void)
         // float newFlowValue=CurrentPhase.getTarget();
         // float pressureRestriction=CurrentPhase.getRestriction();
         // openvalve();
-      pumpPct_Output=  setPumpFlow((double)holdingRegisters[7]/10,holdingRegisters[3]/10,currentState.pressure,currentState.pumpFlow,currentState.pressureChangeSpeed);
+      //pumpPct_Output=  setPumpFlow((double)holdingRegisters[7]/10,holdingRegisters[3]/10,currentState.pressure,currentState.pumpFlow,currentState.pressureChangeSpeed);
 
         
       }
@@ -443,8 +489,17 @@ void modbusprocess()
 holdingRegisters[4]=currentState.smoothedPressure*10;
  holdingRegisters[5]=currentState.waterTemperature*10;
 holdingRegisters[6]=pumpPct_Output*100;
-//holdingRegisters[7]= flow setpoint
 
+
+
+//holdingRegisters[7]= flow setpoint
+Serial.print("flow setpoint:");
+Serial.println(holdingRegisters[7]);
+
+
+holdingRegisters[8]=currentState.smoothedPumpFlow*10;
+Serial.print("flow:");
+Serial.println(currentState.smoothedPumpFlow);
 
 holdingRegisters[9]=brewState();
 
@@ -482,11 +537,8 @@ void loop()
 
   heartBeat();
 
-double flowsetpoint=(double)analogRead(VR)/100;
-if(flowsetpoint<2.0)flowsetpoint=2.0;
 
 
-  holdingRegisters[7]= flowsetpoint*10;  
 
 
   sensorsRead();
