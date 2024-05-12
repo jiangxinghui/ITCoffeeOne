@@ -3,12 +3,15 @@
 #include "peripherals/peripherals.h"
 #include "ADS1X15.h"
 #include "internal_watchdog.h"
-
+#include "profiling_phases.h"
+#include "predictive_weight.h"
 #include "system_state.h"
+#include "eeprom_data/eeprom_data.h"
 #ifdef STM32_BOARD
 #else
 
 #endif
+
 
 void updateProfilerPhases(void) ;
 
@@ -16,11 +19,17 @@ SimpleKalmanFilter smoothPressure(0.6f, 0.6f, 0.1f);
 SimpleKalmanFilter smoothPumpFlow(0.1f, 0.1f, 0.01f);
 SimpleKalmanFilter smoothConsideredFlow(0.1f, 0.1f, 0.1f);
 
+//default phases. Updated in updateProfilerPhases.
+Profile profile;
+PhaseProfiler phaseProfiler(profile);
+
+PredictiveWeight predictiveWeight;
 
 SensorState currentState;
 OPERATION_MODES selectedOperationalMode;
 
-//eepromValues_t runningCfg;
+
+eepromValues_t runningCfg;
 
 
 
@@ -58,8 +67,22 @@ int cps;
 
 static void heartBeat(void)
 {
+
+uint16_t counter=500;
+
+if(currentState.temperature>=holdingRegisters[0]/10-1)
+{
+  counter=500;
+}
+else
+{
+  counter=125;  //fast flash when temperature not ready
+}
+
+
   uint32_t elapsedTime=millis()-HeartBeatTimer;
-  if(elapsedTime>500)
+  
+  if(elapsedTime>counter)
   {
    digitalWrite(LED_BUILTIN,!digitalRead(LED_BUILTIN));
 
@@ -100,6 +123,7 @@ Serial.begin(9600);
 //pin init
 pinInit();
 
+currentState.pressure=0;
 
 myHeater.gOutputPwr=0;
 
@@ -108,9 +132,12 @@ myHeater.gOutputPwr=0;
 setPumpOff();
 
 
-
+#ifdef STM32_BOARD
  // Initialising the saved values or writing defaults if first start
-
+  eepromInit();
+  runningCfg = eepromGetDefaultValues();
+#endif
+//
 
 cpsInit();
 
@@ -125,9 +152,9 @@ pumpInit(zcPin,dimmerPin, 50,0.2225f);
 coils[0]=false;
 coils[1]=false;
 
-holdingRegisters[0]=90*10;  //temp setpoint
+holdingRegisters[0]=93*10;  //temp setpoint
 holdingRegisters[3]=9*10;  //pressure setpoint
-holdingRegisters[7]=20;  //flow setpoint
+holdingRegisters[7]=15;  //flow setpoint
  modbus.configureHoldingRegisters(holdingRegisters,10);
 
  modbus.configureCoils(coils, 2);                       // bool array of coil values, number of coils
@@ -237,19 +264,26 @@ static void sensorsReadPressure(void) {
     float elapsedTimeSec = elapsedTime / 1000.f;
 
     float result=getPressure();
+   
     if(result!=-1&&result!=-2)
     {
-      Serial.println(result);
-      if(result==0)currentState.pressure=1.0;
-      else
+   
+  if(result<=0)currentState.pressure=0;
+  else
      currentState.pressure = result;
 
-    // Serial.println(result);
+   
+    }
+   
+
+     // Serial.println(result);
     previousSmoothedPressure = currentState.smoothedPressure;
 
     currentState.smoothedPressure = smoothPressure.updateEstimate(currentState.pressure);
     currentState.pressureChangeSpeed = (currentState.smoothedPressure - previousSmoothedPressure) / elapsedTimeSec;
-    }
+
+
+
     pressureTimer = millis();
   }
 }
@@ -290,7 +324,11 @@ static long sensorsReadFlow(float elapsedTimeSec) {
 
   previousSmoothedPumpFlow = currentState.pressure;
   // Some flow smoothing
-  currentState.smoothedPumpFlow = smoothPumpFlow.updateEstimate(currentState.pumpFlow);
+  float estimateFlow=smoothPumpFlow.updateEstimate(currentState.pumpFlow);
+  
+ if(estimateFlow<0)  currentState.smoothedPumpFlow =0;
+ else
+   currentState.smoothedPumpFlow =estimateFlow;
 
   currentState.pumpFlowChangeSpeed = (currentState.smoothedPumpFlow - previousSmoothedPumpFlow) / elapsedTimeSec;
   return pumpClicks;
@@ -313,8 +351,8 @@ static void calculateWeightAndFlow(void) {
       //todo predictiveWeight
 
 
-      float consideredFlow = currentState.smoothedPumpFlow * elapsedTimeSec;
-    //   // Update predictive class with our current phase
+    //   float consideredFlow = currentState.smoothedPumpFlow * elapsedTimeSec;
+    // //   // Update predictive class with our current phase
     //   CurrentPhase& phase = phaseProfiler.getCurrentPhase();
     //   predictiveWeight.update(currentState, phase, runningCfg);
 
@@ -380,43 +418,43 @@ static void brewDetect(void)
   {
     if(brewActive)
     {
-     //  CurrentPhase& CurrentPhase=phaseProfiler.getCurrentPhase();
+      // CurrentPhase& CurrentPhase=phaseProfiler.getCurrentPhase();
 
-      // // if(phaseProfiler.isFinished())
-      // // {
-      // //   setPumpOff();
-      // //   //closeValve();
-      // //   brewActive=false;
-      // // }
-      // // else 
+      // if(phaseProfiler.isFinished())
+      // {
+      //   setPumpOff();
+      //   //closeValve();
+      //   brewActive=false;
+      // }
+      // else 
       
       // if(CurrentPhase.getType()==PHASE_TYPE::PHASE_TYPE_PRESSURE){
 
 
       pumpPct_Output= setPumpPressure(holdingRegisters[3]/10 , (double) holdingRegisters[7]/10, currentState.smoothedPressure,currentState.smoothedPumpFlow,currentState.pressureChangeSpeed);
       
-      //}
+      // }
       
-      // else
-      {
+      //  else
+      // {
 
-        // float newFlowValue=CurrentPhase.getTarget();
-        // float pressureRestriction=CurrentPhase.getRestriction();
-        // openvalve();
-      //pumpPct_Output=  setPumpFlow((double)holdingRegisters[7]/10,holdingRegisters[3]/10,currentState.pressure,currentState.pumpFlow,currentState.pressureChangeSpeed);
+      //   float newFlowValue=CurrentPhase.getTarget();
+      //   float pressureRestriction=CurrentPhase.getRestriction();
+      //  // openvalve();
+      // pumpPct_Output=  setPumpFlow((double)holdingRegisters[7]/10,holdingRegisters[3]/10,currentState.pressure,currentState.pumpFlow,currentState.pressureChangeSpeed);
 
         
-      }
+      // }
 
       
       
-      }
-      else
-      {
+    }
+    else
+    {  //not brew active
   pumpPct_Output=0;
         setPumpOff();
 
-      }
+    }
 
     
     //keep the water at temp
@@ -488,6 +526,8 @@ void modbusprocess()
 //holdingRegisters[3]  //pressure target setpoint
 holdingRegisters[4]=currentState.smoothedPressure*10;
  holdingRegisters[5]=currentState.waterTemperature*10;
+
+
 holdingRegisters[6]=pumpPct_Output*100;
 
 
@@ -497,7 +537,7 @@ Serial.print("flow setpoint:");
 Serial.println(holdingRegisters[7]);
 
 
-holdingRegisters[8]=currentState.smoothedPumpFlow*10;
+holdingRegisters[8]=(uint16_t)(currentState.smoothedPumpFlow*10);
 Serial.print("flow:");
 Serial.println(currentState.smoothedPumpFlow);
 

@@ -51,7 +51,7 @@
 
  //#define USART_LCD     Serial2 // PA2(TX) & PA3(RX)
  
- #define USART_Modbus     Serial2 // PA2(TX) & PA3(RX)
+
 // //#define USART_ESP     Serial1 // PA9(TX) & PA10(RX)
 
 // #define USART_DEBUG   Serial1  // USB-CDC (Takes PA8,PA9,PA10,PA11)
@@ -63,7 +63,7 @@
 #define DebugSerial_RX  PA7 // nano d10 ,
 
 //add by xhjiang
-//#define USART_Modbus Serial  //pa9 pa10
+#define USART_Modbus Serial  //pa9 pa10
 
 #define VR PB0
 

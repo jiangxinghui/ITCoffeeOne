@@ -71,26 +71,28 @@ float clickpersecondforrestrictionflow=getClicksPerSecondForFlow(flowRestriction
   float maxPumpPct = flowRestriction <= 0.f ? 1.f : clickpersecondforrestrictionflow / (float) maxPumpClicksPerSecond;
  
 
-//根据当前流量和压力，得出维持流量的泵的压力
+//根据当前流量和压力，得出维持流量的泵的pumpPct
   float pumpPctToMaintainFlow = getClicksPerSecondForFlow(currentFlow, currentPressure) / (float) maxPumpClicksPerSecond;
 
 //如果压力差距很大，
   if (diff > 2.f) {
-    // return fminf(maxPumpPct, 0.25f + 0.2f * diff);
-     return fminf(maxPumpPct, 0.25f + 0.4f * diff);
+
+     return fminf(maxPumpPct, 0.25f + 0.2f * diff);
   }
-//如果压力大于0
+//如果压力差大于0
   if (diff > 0.f) {
     return fminf(maxPumpPct, pumpPctToMaintainFlow * 0.95f + 0.1f + 0.2f * diff);
   }
 
-//如果压力超了 diff<0
+//如果压力超过了设定
+
+//diff<0
 
   //如果压力增大正在减缓，维持一个最小流量
   if (currentPressureChangeSpeed < 0) {
-    return fminf(maxPumpPct, pumpPctToMaintainFlow * 0.2f);
+    return fminf(maxPumpPct, pumpPctToMaintainFlow * 0.2f+0.1f);
   }
-  //否则，停止工作
+  //压力超过了，并且正在增加，
   return 0;
 }
 
@@ -105,6 +107,8 @@ float setPumpPressure(const float targetPressure, const float flowRestriction,
  volatile float pumpPct = getPumpPct(targetPressure, flowRestriction, currentPressure,currentFlow, currentPressureChangeSpeed);
 
   //Serial.println(pumpPct);
+//added by itcoffee
+if(pumpPct<0)pumpPct=0;
 
    setPumpToRawValue((uint8_t)(pumpPct * PUMP_RANGE));
  return pumpPct;

@@ -8,17 +8,24 @@
 namespace {
   typedef struct {
     char     name[16];
+
+    //PI (pre infusion phase  预灌注阶段)
     bool     preinfusionState;
     bool     preinfusionFlowState;
     uint16_t preinfusionSec;
     float    preinfusionBar;
     float    preinfusionFlowVol;
     uint16_t preinfusionFlowTime;
+
     float    preinfusionFlowPressureTarget;
     float    preinfusionPressureFlowTarget;
+
+     //   switch on： when one of the following trigger,move on to the soak phase
     float    preinfusionFilled;
     bool     preinfusionPressureAbove;
     float    preinfusionWeightAbove;
+
+    //soak phase  预浸泡阶段
     bool     soakState;
     uint16_t soakTimePressure;
     uint16_t soakTimeFlow;
@@ -29,6 +36,9 @@ namespace {
     float    soakAboveWeight;
     uint16_t preinfusionRamp;
     uint16_t preinfusionRampSlope;
+
+
+    //transition phase in between soak and profile.
     bool     tpState;
     bool     tpType;
     float    tpProfilingStart;
@@ -45,7 +55,10 @@ namespace {
     uint16_t tfProfileSlope;
     uint16_t tfProfileSlopeShape;
     float    tfProfilingPressureRestriction;
+
+    //profile
     bool     profilingState;
+
     bool     mfProfileState;
     float    mpProfilingStart;
     float    mpProfilingFinish;
