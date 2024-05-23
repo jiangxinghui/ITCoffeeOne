@@ -440,7 +440,8 @@ static void brewDetect(void)
         }
       }
 
-      if(!brewActiveAndTemperatureOk)return;  //wait until temp is ok to start brewing
+      if(brewActiveAndTemperatureOk)  //temp should be ok before start pump
+      {
 
       // CurrentPhase& CurrentPhase=phaseProfiler.getCurrentPhase();
 
@@ -469,6 +470,8 @@ static void brewDetect(void)
 
         
       // }
+
+      }
 
       
       
