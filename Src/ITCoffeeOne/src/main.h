@@ -64,6 +64,8 @@ unsigned long steamTime;
 
 //brew detection vars
 bool brewActive = false;
+bool brewActiveAndTemperatureOk=false;
+
 bool nonBrewModeActive = false;
 //PP&PI variables
 int preInfusionFinishedPhaseIdx = 3;

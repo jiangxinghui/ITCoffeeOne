@@ -431,6 +431,17 @@ static void brewDetect(void)
   {
     if(brewActive)
     {
+      if(brewActiveAndTemperatureOk==false)  //enter once when brewing, in case temp lower when brewing
+      {
+       
+        if(currentState.temperature*10>=holdingRegisters[0])
+        {
+          brewActiveAndTemperatureOk=true;
+        }
+      }
+
+      if(!brewActiveAndTemperatureOk)return;  //wait until temp is ok to start brewing
+
       // CurrentPhase& CurrentPhase=phaseProfiler.getCurrentPhase();
 
       // if(phaseProfiler.isFinished())
@@ -465,6 +476,7 @@ static void brewDetect(void)
     else
     {  //not brew active
   pumpPct_Output=0;
+  brewActiveAndTemperatureOk=false;
         setPumpOff();
 
     }

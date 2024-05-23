@@ -159,7 +159,7 @@ void Heater::justDoCoffee(float targetTemperature,float temperature, const bool 
   } else { //if brewState == false
 
 
-if(millis()-lastActivityTime>300*1000)  //300seconds
+if(millis()-lastActivityTime>30000)  //30seconds
 heaterState=StandBy;
 else
 heaterState=Idle;
