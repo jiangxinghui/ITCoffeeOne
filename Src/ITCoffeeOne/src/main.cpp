@@ -31,7 +31,7 @@ OPERATION_MODES selectedOperationalMode;
 
 eepromValues_t runningCfg;
 
-
+unsigned long  lastActivityTime=0;
 
 SystemState systemState;
 
@@ -68,16 +68,25 @@ int cps;
 static void heartBeat(void)
 {
 
-uint16_t counter=500;
+uint16_t counter=1000;
+if(myHeater.heaterState==Brewing||myHeater.heaterState==Idle)
+{
+  if(currentState.temperature>=holdingRegisters[0]/10-1)
+  {
+    counter=1000;
+  }
+  else
+  {
+    counter=125;  //fast flash when temperature not ready
+  }
 
-if(currentState.temperature>=holdingRegisters[0]/10-1)
-{
-  counter=500;
 }
-else
+else if (myHeater.heaterState==StandBy)
 {
-  counter=125;  //fast flash when temperature not ready
+counter=3000;
 }
+
+
 
 
   uint32_t elapsedTime=millis()-HeartBeatTimer;
@@ -127,6 +136,8 @@ currentState.pressure=0;
 
 myHeater.gOutputPwr=0;
 
+
+lastActivityTime=millis();
 
 //pump
 setPumpOff();
@@ -414,6 +425,8 @@ static void brewDetect(void)
 
 
 
+
+
   static void profiling(void)
   {
     if(brewActive)
@@ -467,7 +480,7 @@ static void brewDetect(void)
 
   // myHeater.loop();
 
-   digitalWrite(HeaterPin,myHeater.heaterState);
+   digitalWrite(HeaterPin,myHeater.heaterPinState);
 
 
 

@@ -26,12 +26,9 @@ brewDivider=3;
 maxHeatTemperature=120;
 
 
+heaterState=Idle;
+lastActivityTime=millis();
 
-
-}
-
-void Heater::initialize()
-{
 
 }
 
@@ -91,7 +88,7 @@ void Heater::updateHeater() {
 }
 void Heater::turnHeatElementOnOff(bool on) {
   //digitalWrite(HeaterPin, on); //turn pin high , change to main.cpp
-  heaterState = on;
+  heaterPinState = on;
   
 }
 
@@ -116,10 +113,14 @@ void Heater::justDoCoffee(float targetTemperature,float temperature, const bool 
  int HPWR_OUT;
 
  static bool brewActived;
- time_now=millis();
+ 
+
 
   if (brewActive) { //if brewState == true
     brewActived=true;
+    heaterState=Brewing;
+    lastActivityTime=millis();
+    
 
     //all power beyond 5degree when brew
     if(sensorTemperature <= brewTempSetPoint - 5.f) {
@@ -157,7 +158,25 @@ void Heater::justDoCoffee(float targetTemperature,float temperature, const bool 
     }
   } else { //if brewState == false
 
+
+if(millis()-lastActivityTime>300*1000)  //300seconds
+heaterState=StandBy;
+else
+heaterState=Idle;
+
   
+    if(heaterState==StandBy)
+    {
+      //when in standby, we
+
+   
+      gOutputPwr=0; //added by itcoffee
+   
+
+
+    }
+    else if(heaterState==Idle)
+    {
     
       if (sensorTemperature <= ((float)brewTempSetPoint - 30.f)) {
          turnHeatElementOnOff(1);
@@ -204,7 +223,8 @@ void Heater::justDoCoffee(float targetTemperature,float temperature, const bool 
          gOutputPwr=0; //added by itcoffee
             turnHeatElementOnOff(0);
       }
-    
+    }
+
     }//brew state =off
   
 

@@ -4,7 +4,11 @@
 
 //#include <PID_v1.h>
 #include <Arduino.h>
-
+enum HeaterState{
+  Idle,   //ready to brew when switch to , and go to standby if not brew for 5 minute
+  StandBy,
+  Brewing
+};
 
   
 class Heater {
@@ -12,7 +16,7 @@ public:
 
 
 
-
+HeaterState heaterState;
 
 
 #define HEATER_INTERVAL 1000
@@ -26,7 +30,7 @@ int Pwr_Out_Low_Percent=10;  //0-100
 
 float heatcycles; // the number of millis out of 1000 for the current heat amount (percent * 10)
 
- bool heaterState = 0;
+ bool heaterPinState = 0;
 
  //for gag
     uint32_t heaterWave;
@@ -45,7 +49,7 @@ bool osmode = false;
 bool poweroffMode = false;
 bool externalControlMode = false;
 
-
+unsigned long  lastActivityTime;
 
 
 
@@ -53,10 +57,6 @@ bool externalControlMode = false;
 //char Status[256];
 
   Heater(int hpwr);
-
-  void initialize();
-
-
 
 
 void SetOutputLimit(double min ,double max);
