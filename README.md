@@ -29,6 +29,9 @@ Now, development started, and vscode+arduino freertos+modbus, is ready.
 5. Android iOS APP(developing)
   maui bluetooth app developing.
 
+  currently working on ITCoffee-One-Lite branch.
+
+
 ## Contribution
 
 We welcome and appreciate any form of contribution. If you'd like to contribute to the project, please refer to the [Contribution Guidelines], submit issues, propose features, or contribute code.
