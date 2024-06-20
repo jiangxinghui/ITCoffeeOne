@@ -27,8 +27,11 @@ Now, development started, and vscode+arduino modbus, is ready.
 2. Pressure control section(future)
 
 3. IO(future)
-4.  PCB board(futrue)
-5. Android iOS APP(developing)
+4.  PCB board file added
+   support arduino nano.
+
+
+6. Android iOS APP(developing)
   maui bluetooth app developing.
 
 ## Contribution
