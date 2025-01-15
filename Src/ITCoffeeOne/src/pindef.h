@@ -90,9 +90,9 @@
 #define brew_led    8
 #define steam_led   9 
 
-#define zcPin         2 //nano d2
 
-#define dimmerPin     3 //nano d3   ,dimmer module for pump control
+
+#define pump_Pin     3 //nano d3    for pump control
 
 
 

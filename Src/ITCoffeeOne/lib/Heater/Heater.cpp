@@ -159,7 +159,7 @@ void Heater::justDoCoffee(float targetTemperature,float temperature, const bool 
   } else { //if brewState == false
 
 
-if(millis()-lastActivityTime>((unsigned long)Heater_Standby_Second*1000))  //30seconds
+if(millis()-lastActivityTime>((unsigned long)Heater_Standby_Second*1000))  //defualt: 120seconds
 heaterState=StandBy;
 else
 heaterState=Idle;
@@ -223,6 +223,9 @@ heaterState=Idle;
          gOutputPwr=0; //added by itcoffee
             turnHeatElementOnOff(0);
       }
+
+
+
     }
 
     }//brew state =off

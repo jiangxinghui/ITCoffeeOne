@@ -6,45 +6,20 @@
 #include "pindef.h"
 #include "internal_watchdog.h"
 
- uint8_t PUMP_RANGE = 100;
+Pump::Pump()
+{
 
-
-float flowPerClickAtZeroBar = 0.27f;
-int maxPumpClicksPerSecond = 50;
-float fpc_multiplier = 1.2f;
-bool zcup=false;
-unsigned long heatCurrentTime = 0, heatLastTime = 0;
-
-unsigned long time_now;
-#define HEATER_INTERVAL 1000
-
-
-float pumpcycles; // the number of millis out of 1000 for the current pump (percent * 10)
-
-  volatile long _counter;
-
-  
-float pressureInefficiencyCoefficient[7] ={
-  0.045f,
-  0.015f,
-  0.0033f,
-  0.000685f,
-  0.000045f,
-  0.009f,
-  -0.0018f
-};
-
+}
 
 
 // Initialising some pump specific specs, mainly:
 // - max pump clicks(dependant on region power grid spec)
 // - pump clicks at 0 pressure in the system
-void  pumpInit(unsigned char sensePin, unsigned char controlPin,const int powerLineFrequency, 
+void Pump:: pumpInit(
 const float pumpFlowAtZero) {
  //  psm.freq = powerLineFrequency;
 
  
-  maxPumpClicksPerSecond = powerLineFrequency;
   flowPerClickAtZeroBar = pumpFlowAtZero;
   fpc_multiplier = 60.f / (float)maxPumpClicksPerSecond;
 
@@ -52,7 +27,7 @@ const float pumpFlowAtZero) {
 
 }
 
-void setPumpPowerPercentage(float power_in_100_percent)
+void  Pump:: setPumpPowerPercentage(float power_in_100_percent)
 {
     if (power_in_100_percent < 0.0) {
     power_in_100_percent = 0.0;
@@ -61,26 +36,30 @@ void setPumpPowerPercentage(float power_in_100_percent)
     power_in_100_percent = 100;
   }
   pumpcycles = power_in_100_percent*PUMP_INTERVAL/100;  
+
+//added by xhjiang , 
+updatePump();  //
+
 }
 
-long getAndResetClickCounter(void) {
+long  Pump:: getAndResetClickCounter(void) {
   long counter = _counter;
   _counter=0;
   return counter;
 }
 
-void setPumpOff()
+void  Pump:: setPumpOff()
 {
   setPumpPowerPercentage(0);
 }
 
-void turnHeatElementOnOff(bool on) {
-  digitalWrite(Heater_1_Pin, on); //turn pin high , change to main.cpp
+void  Pump:: turnPumpElementOnOff(bool on) {
+ pumpPinState=on;
 
   
 }
 
-void update() {
+void  Pump:: updatePump() {
    time_now=millis();
   heatCurrentTime = time_now;
 
@@ -88,17 +67,17 @@ void update() {
   
     // begin cycle
   
-    turnHeatElementOnOff(1);  //
+    turnPumpElementOnOff(1);  //
     heatLastTime = heatCurrentTime;
   }
   if (heatCurrentTime - heatLastTime >= pumpcycles) {
   
 
     
-    turnHeatElementOnOff(0);
+    turnPumpElementOnOff(0);
   }
 
-  
+
     
 }
 
@@ -113,7 +92,7 @@ void update() {
 /// @param currentFlow 当前流量
 /// @param currentPressureChangeSpeed 当前压力变化速度
 /// @return 
-inline float getPumpPct(const float targetPressure, const float flowRestriction, float currentPressure,float currentFlow,float currentPressureChangeSpeed) {
+inline float  Pump:: getPumpPct(const float targetPressure, const float flowRestriction, float currentPressure,float currentFlow,float currentPressureChangeSpeed) {
  //如果目标压力为零，表示泵不用工作，返回0
   if (targetPressure == 0.f) {
       return 0.f;
@@ -158,7 +137,7 @@ float clickpersecondforrestrictionflow=getClicksPerSecondForFlow(flowRestriction
 // - expected target
 // - flow
 // - pressure direction
-float setPumpPressure(const float targetPressure, const float flowRestriction,
+float  Pump:: setPumpPressure(const float targetPressure, const float flowRestriction,
  float currentPressure,float currentFlow,float currentPressureChangeSpeed) {
  //get pump pcent that need to get the targetpressure
  volatile float pumpPct = getPumpPct(targetPressure, flowRestriction, currentPressure,currentFlow, currentPressureChangeSpeed);
@@ -168,6 +147,7 @@ float setPumpPressure(const float targetPressure, const float flowRestriction,
 if(pumpPct<0)pumpPct=0;
 
    setPumpPowerPercentage(pumpPct );
+
  return pumpPct;
  
 
@@ -184,14 +164,14 @@ if(pumpPct<0)pumpPct=0;
 /// @brief 在特定压力下，根据一个 泵的流量压力特性曲线，获取每次震动带来的流量。
 /// @param pressure 给定压力
 /// @return 每次震动的流量
-float getPumpFlowPerClick(const float pressure) {
+float  Pump:: getPumpFlowPerClick(const float pressure) {
   float fpc = 0.f;
   fpc = (pressureInefficiencyCoefficient[5] / pressure + pressureInefficiencyCoefficient[6]) * ( -pressure * pressure ) + ( flowPerClickAtZeroBar - pressureInefficiencyCoefficient[0]) - (pressureInefficiencyCoefficient[1] + (pressureInefficiencyCoefficient[2] - (pressureInefficiencyCoefficient[3] - pressureInefficiencyCoefficient[4] * pressure) * pressure) * pressure) * pressure;
   return fpc * fpc_multiplier;
 }
 
 // Follows the schematic from https://www.cemegroup.com/solenoid-pump/e5-60 modified to per-click
-float getPumpFlow(const float cps, const float pressure) {
+float  Pump:: getPumpFlow(const float cps, const float pressure) {
   return cps * getPumpFlowPerClick(pressure);
 }
 
@@ -201,7 +181,7 @@ float getPumpFlow(const float cps, const float pressure) {
 /// @param flow 目标流量
 /// @param pressure 当前压力
 /// @return 
-float getClicksPerSecondForFlow(const float flow, const float pressure) {
+float  Pump:: getClicksPerSecondForFlow(const float flow, const float pressure) {
  //如果目标流量为零，不需要工作
   if (flow == 0.f) return 0;
   //获取当前压力下，震动一次的流量
@@ -213,7 +193,7 @@ float getClicksPerSecondForFlow(const float flow, const float pressure) {
 }
 
 // Calculates pump percentage for the requested flow and updates the pump raw value
-float setPumpFlow(const float targetFlow, const float pressureRestriction, float currentPressure,float currentFlow,float currentPressureChangeSpeed) {
+float  Pump:: setPumpFlow(const float targetFlow, const float pressureRestriction, float currentPressure,float currentFlow,float currentPressureChangeSpeed) {
   float pumpPct ;
   // If a pressure restriction exists then the we go into pressure profile with a flowRestriction
   // which is equivalent but will achieve smoother pressure management

@@ -66,7 +66,7 @@ bool coils[2];
 
 
 Heater myHeater(550);
-
+Pump pump;
 int cps;
 
 static void heartBeat(void)
@@ -146,7 +146,7 @@ myHeater.gOutputPwr=0;
 lastActivityTime=millis();
 
 //pump
-setPumpOff();
+pump.setPumpOff();
 
 
 #ifdef STM32_BOARD
@@ -160,7 +160,7 @@ cpsInit();
 
 thermocoupleInit();
 adsInit();
-pumpInit(zcPin,dimmerPin, 50,0.2225f);
+pump.pumpInit(0.2225f);
 
  // updateProfilerPhases();
 
@@ -234,14 +234,14 @@ static void fillBoilerUntilThreshod(unsigned long elapsedTime) {
 
   if (isBoilerFull(elapsedTime)) {
    // closeValve();
-    setPumpOff();
+   pump. setPumpOff();
     systemState.startupInitFinished = true;
     return;
   }
 
   //lcdShowPopup("Filling boiler!");
   //openValve();
-  setPumpPowerPercentage(35);
+   pump.setPumpPowerPercentage(35);
 }
 
 
@@ -315,7 +315,10 @@ static void sensorsReadTemperature(void) {
 
 
   thermoTimer = millis() + GET_KTYPE_READ_EVERY;
-Serial.print("temperature value:");
+Serial.print("heat output ");
+Serial.print(myHeater.gOutputPwr);
+
+Serial.print(" ,temperature value:");
   Serial.println( currentState.temperature);
 
  }
@@ -333,11 +336,11 @@ static void sensorReadSwitches(void) {
 
 
 static long sensorsReadFlow(float elapsedTimeSec) {
-  long pumpClicks = getAndResetClickCounter();
+  long pumpClicks =  pump.getAndResetClickCounter();
 
   currentState.pumpClicks = (float) pumpClicks / elapsedTimeSec;
  
-  currentState.pumpFlow = getPumpFlow(currentState.pumpClicks, currentState.smoothedPressure);
+  currentState.pumpFlow =  pump.getPumpFlow(currentState.pumpClicks, currentState.smoothedPressure);
 
   previousSmoothedPumpFlow = currentState.pressure;
   // Some flow smoothing
@@ -393,7 +396,7 @@ static void calculateWeightAndFlow(void) {
   } else {
     currentState.consideredFlow = 0.f;
     currentState.smoothedPumpFlow=0.f;
-    currentState.pumpClicks = getAndResetClickCounter();
+    currentState.pumpClicks =  pump.getAndResetClickCounter();
     flowTimer = millis();
   }
 }
@@ -462,7 +465,7 @@ static void brewDetect(void)
       // if(CurrentPhase.getType()==PHASE_TYPE::PHASE_TYPE_PRESSURE){
 
 
-      pumpPct_Output= setPumpPressure(holdingRegisters[3]/10 , (double) holdingRegisters[7]/10, currentState.smoothedPressure,currentState.smoothedPumpFlow,currentState.pressureChangeSpeed);
+      pumpPct_Output= pump. setPumpPressure(holdingRegisters[3]/10 , (double) holdingRegisters[7]/10, currentState.smoothedPressure,currentState.smoothedPumpFlow,currentState.pressureChangeSpeed);
       
       // }
       
@@ -486,7 +489,7 @@ static void brewDetect(void)
     {  //not brew active
   pumpPct_Output=0;
   brewActiveAndTemperatureOk=false;
-        setPumpOff();
+        pump. setPumpOff();
 
     }
 
@@ -502,7 +505,7 @@ static void brewDetect(void)
   // myHeater.loop();
 
    digitalWrite(Heater_1_Pin,myHeater.heaterPinState);
-
+  digitalWrite(pump_Pin, pump.pumpPinState);
 
 
   }
@@ -521,7 +524,7 @@ static inline void sysHealthCheck(float pressureThreshold)
     //watchdogReload();
     /* In the event of the temp failing to read while the SSR is HIGH
     we force set it to LOW while trying to get a temp reading - IMPORTANT safety feature */
-    setPumpOff();
+     pump.setPumpOff();
     //setBoilerOff();
     //setSteamBoilerRelayOff();
     if (millis() > thermoTimer) {

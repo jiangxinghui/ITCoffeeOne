@@ -56,7 +56,7 @@ int Heater_Standby_Second;
 
 //char Status[256];
 
-  Heater(int hpwr,int standby_second=120);
+  Heater(int hpwr,int standby_second=3600);
 
 
 void SetOutputLimit(double min ,double max);
